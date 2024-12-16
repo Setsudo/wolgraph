@@ -22,20 +22,37 @@ app.layout = html.Div([
     # Graph display at the top
     dcc.Graph(id="wheel-graph"),
 
-    # Sliders for each category
+    # Sliders for each category in two columns
     html.Div([
         html.Div([
-            html.Label(f"{category}"),
-            dcc.Slider(
-                id=f"slider-{i}",
-                min=0,
-                max=10,
-                step=1,
-                value=initial_scores[i],
-                marks={i: str(i) for i in range(0, 11)}
-            )
-        ], style={"padding": "10px"})
-        for i, category in enumerate(define_categories)
+            html.Div([
+                html.Label(f"{define_categories[i]}"),
+                dcc.Slider(
+                    id=f"slider-{i}",
+                    min=0,
+                    max=10,
+                    step=1,
+                    value=initial_scores[i],
+                    marks={j: str(j) for j in range(0, 11)}
+                )
+            ], style={"padding": "10px"})
+            for i in range(0, 4)
+        ], style={"width": "48%", "display": "inline-block", "verticalAlign": "top"}),
+
+        html.Div([
+            html.Div([
+                html.Label(f"{define_categories[i]}"),
+                dcc.Slider(
+                    id=f"slider-{i}",
+                    min=0,
+                    max=10,
+                    step=1,
+                    value=initial_scores[i],
+                    marks={j: str(j) for j in range(0, 11)}
+                )
+            ], style={"padding": "10px"})
+            for i in range(4, 8)
+        ], style={"width": "48%", "display": "inline-block", "verticalAlign": "top"})
     ])
 ])
 
