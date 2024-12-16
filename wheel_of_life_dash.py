@@ -19,6 +19,9 @@ initial_scores = [5, 5, 5, 5, 5, 5, 5, 5]
 app.layout = html.Div([
     html.H1("Wheel of Life Interactive Graph", style={"textAlign": "center"}),
 
+    # Graph display at the top
+    dcc.Graph(id="wheel-graph"),
+
     # Sliders for each category
     html.Div([
         html.Div([
@@ -33,10 +36,7 @@ app.layout = html.Div([
             )
         ], style={"padding": "10px"})
         for i, category in enumerate(define_categories)
-    ]),
-
-    # Graph display
-    dcc.Graph(id="wheel-graph")
+    ])
 ])
 
 # Callback to update the Wheel of Life graph based on slider values
