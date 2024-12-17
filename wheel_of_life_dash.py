@@ -19,38 +19,45 @@ initial_scores = [5, 5, 5, 5, 5, 5, 5, 5]
 app.layout = html.Div([
     html.H1("WHEEL OF LIFE", style={"textAlign": "center", "fontFamily": "serif", "fontWeight": "bold"}),
 
-    # Graph display at the top
+    # Sliders and graph in one band
     html.Div([
-        dcc.Graph(id="wheel-graph", style={"width": "100%", "height": "80vh"})
-    ], style={"display": "flex", "justifyContent": "center", "alignItems": "center"}),
-
-    # Add sliders for each category
-    html.Div([
+        # Left side sliders
         html.Div([
-            html.Label(define_categories[i], style={"fontFamily": "serif", "fontSize": "16px", "color": "teal"}),
-            dcc.Slider(
-                id=f"slider-{i}",
-                min=0,
-                max=10,
-                step=1,
-                value=initial_scores[i],
-                marks={j: str(j) for j in range(0, 11)}
-            )
-        ], style={"margin": "10px"}) for i in range(len(define_categories))
-    ], style={"width": "80%", "margin": "auto"}),
+            html.Div([
+                html.Label(define_categories[i], style={"fontFamily": "serif", "fontSize": "16px", "color": "teal"}),
+                dcc.Slider(
+                    id=f"slider-{i}",
+                    min=0,
+                    max=10,
+                    step=1,
+                    value=initial_scores[i],
+                    marks={j: str(j) for j in range(0, 11)}
+                )
+            ], style={"margin": "10px"})
+            for i in [5, 6, 7, 0]  # Relaxation, Relationships, Spirituality, Health
+        ], style={"width": "25%", "display": "inline-block", "verticalAlign": "top"}),
 
-    # Bottom sections for priority categories and notes
-    html.Div([
+        # Graph in the center
         html.Div([
-            html.H3("priority categories", style={"textAlign": "center", "fontFamily": "serif", "textTransform": "lowercase"}),
-            html.Div(style={"border": "1px solid teal", "height": "200px", "margin": "10px"})
-        ], style={"width": "45%", "display": "inline-block", "verticalAlign": "top", "paddingRight": "2%"}),
+            dcc.Graph(id="wheel-graph", style={"width": "100%", "height": "60vh"})
+        ], style={"width": "50%", "display": "inline-block", "verticalAlign": "top"}),
 
+        # Right side sliders
         html.Div([
-            html.H3("notes", style={"textAlign": "center", "fontFamily": "serif", "textTransform": "lowercase"}),
-            html.Div(style={"border": "1px solid teal", "height": "200px", "margin": "10px"})
-        ], style={"width": "45%", "display": "inline-block", "verticalAlign": "top", "paddingLeft": "2%"})
-    ])
+            html.Div([
+                html.Label(define_categories[i], style={"fontFamily": "serif", "fontSize": "16px", "color": "teal"}),
+                dcc.Slider(
+                    id=f"slider-{i}",
+                    min=0,
+                    max=10,
+                    step=1,
+                    value=initial_scores[i],
+                    marks={j: str(j) for j in range(0, 11)}
+                )
+            ], style={"margin": "10px"})
+            for i in [4, 3, 2, 1]  # Career, Family, Finance, Personal Growth
+        ], style={"width": "25%", "display": "inline-block", "verticalAlign": "top"})
+    ], style={"display": "flex", "justifyContent": "center", "alignItems": "center", "width": "100%"}),
 ])
 
 # Callback to update the Wheel of Life graph based on slider values
@@ -64,6 +71,7 @@ def update_graph(*values):
 
     fig = go.Figure()
 
+    # Add grid and line styles to match the reference
     fig.add_trace(go.Scatterpolar(
         r=scores,
         theta=categories_with_closure,
@@ -80,18 +88,19 @@ def update_graph(*values):
                 tickmode="array",
                 tickvals=[i * (360 / len(define_categories)) for i in range(len(define_categories))],
                 ticktext=define_categories,
-                tickfont=dict(size=12, family="serif", color="teal"),
+                tickfont=dict(size=14, family="serif", color="teal"),
                 showline=True,
-                linewidth=1
+                linewidth=2,
+                linecolor="teal"
             ),
             radialaxis=dict(
                 visible=True,
                 range=[0, 10],
                 tickmode="linear",
-                tickangle=0,
-                tickfont=dict(size=10, family="serif", color="teal"),
+                tickfont=dict(size=12, family="serif", color="teal"),
                 showline=True,
-                linewidth=1,
+                linewidth=2,
+                linecolor="teal",
                 gridcolor="teal"
             )
         ),
