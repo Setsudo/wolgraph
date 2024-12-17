@@ -19,7 +19,7 @@ initial_scores = [5, 5, 5, 5, 5, 5, 5, 5]
 app.layout = html.Div([
     html.H1("WHEEL OF LIFE", style={"textAlign": "center", "fontFamily": "serif", "fontWeight": "bold"}),
 
-    # Sliders and graph in one band
+    # Sliders, bar graphs, and central circle graph in one band
     html.Div([
         # Left side sliders
         html.Div([
@@ -31,11 +31,11 @@ app.layout = html.Div([
                     max=10,
                     step=1,
                     value=initial_scores[i],
-                    marks={j: str(j) for j in range(0, 11)}
+                    marks={j: str(j) for j in range(0, 11)},
+                    tooltip={"placement": "bottom", "always_visible": True}
                 )
-            ], style={"margin": "10px"})
-            for i in [5, 6, 7, 0]  # Relaxation, Relationships, Spirituality, Health
-        ], style={"width": "25%", "display": "inline-block", "verticalAlign": "top"}),
+            ], style={"marginBottom": "20px"}) for i in [5, 6, 7, 0]  # Relaxation, Relationships, Spirituality, Health
+        ], style={"width": "25%", "display": "inline-block", "verticalAlign": "top", "padding": "10px"}),
 
         # Graph in the center
         html.Div([
@@ -52,15 +52,15 @@ app.layout = html.Div([
                     max=10,
                     step=1,
                     value=initial_scores[i],
-                    marks={j: str(j) for j in range(0, 11)}
+                    marks={j: str(j) for j in range(0, 11)},
+                    tooltip={"placement": "bottom", "always_visible": True}
                 )
-            ], style={"margin": "10px"})
-            for i in [4, 3, 2, 1]  # Career, Family, Finance, Personal Growth
-        ], style={"width": "25%", "display": "inline-block", "verticalAlign": "top"})
+            ], style={"marginBottom": "20px"}) for i in [4, 3, 2, 1]  # Career, Family, Finance, Personal Growth
+        ], style={"width": "25%", "display": "inline-block", "verticalAlign": "top", "padding": "10px"})
     ], style={"display": "flex", "justifyContent": "center", "alignItems": "center", "width": "100%"}),
 ])
 
-# Callback to update the Wheel of Life graph based on slider values
+# Callback to update the Wheel of Life graph and bar graphs based on slider inputs
 @app.callback(
     Output("wheel-graph", "figure"),
     [Input(f"slider-{i}", "value") for i in range(len(define_categories))]
@@ -69,10 +69,9 @@ def update_graph(*values):
     scores = list(values) + [values[0]]  # Ensure the graph is circular
     categories_with_closure = define_categories + [define_categories[0]]
 
-    fig = go.Figure()
-
-    # Add grid and line styles to match the reference
-    fig.add_trace(go.Scatterpolar(
+    # Wheel of Life Graph
+    wheel_fig = go.Figure()
+    wheel_fig.add_trace(go.Scatterpolar(
         r=scores,
         theta=categories_with_closure,
         fill='none',
@@ -80,11 +79,11 @@ def update_graph(*values):
         marker=dict(size=6)
     ))
 
-    fig.update_layout(
+    wheel_fig.update_layout(
         polar=dict(
             angularaxis=dict(
                 direction="clockwise",
-                rotation=90,  # Starts at the top for alignment
+                rotation=90,
                 tickmode="array",
                 tickvals=[i * (360 / len(define_categories)) for i in range(len(define_categories))],
                 ticktext=define_categories,
@@ -96,7 +95,6 @@ def update_graph(*values):
             radialaxis=dict(
                 visible=True,
                 range=[0, 10],
-                tickmode="linear",
                 tickfont=dict(size=12, family="serif", color="teal"),
                 showline=True,
                 linewidth=2,
@@ -109,7 +107,7 @@ def update_graph(*values):
         paper_bgcolor="#FFF8EF"
     )
 
-    return fig
+    return wheel_fig
 
 # Run the app
 if __name__ == "__main__":
