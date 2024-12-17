@@ -79,17 +79,18 @@ def update_graph(*values):
         marker=dict(size=6)
     ))
 
-    # Add individual category lines
-    for category in define_categories:
+    # Add radial category lines
+    for i, category in enumerate(define_categories):
         wheel_fig.add_trace(go.Scatterpolar(
-            r=[10, 0],  # Full scale of the radial line
+            r=[0, 10],
             theta=[category, category],
             mode='lines',
             line=dict(color="gray", dash="dot", width=1),
-            hoverinfo="none",
+            hoverinfo='none',
             showlegend=False
         ))
 
+    # Add proper radial labels using ticktext
     wheel_fig.update_layout(
         polar=dict(
             angularaxis=dict(
@@ -97,7 +98,7 @@ def update_graph(*values):
                 rotation=90,
                 tickmode="array",
                 tickvals=[i * (360 / len(define_categories)) for i in range(len(define_categories))],
-                ticktext=define_categories,
+                ticktext=define_categories,  # Proper radial labels here
                 tickfont=dict(size=14, family="serif", color="teal"),
                 showline=True,
                 linewidth=2,
@@ -108,7 +109,6 @@ def update_graph(*values):
                 range=[0, 10],
                 tickfont=dict(size=12, family="serif", color="teal"),
                 ticks="outside",  # Place ticks outside the grid lines
-                tickangle=0,
                 tickmode="linear",
                 tickvals=list(range(1, 11)),  # Start ticks from 1 instead of 0
                 ticktext=[str(val) for val in range(1, 11)],
