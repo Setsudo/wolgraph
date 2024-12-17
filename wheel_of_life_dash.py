@@ -31,7 +31,7 @@ app.layout = html.Div([
                     max=10,
                     step=1,
                     value=initial_scores[i],
-                    marks={j: str(j) for j in range(0, 11)},
+                    marks={j: str(j) for j in range(0, 11)},  # Add "0" back to the sliders
                     tooltip={"placement": "bottom", "always_visible": True}
                 )
             ], style={"marginBottom": "20px"}) for i in [5, 6, 7, 0]  # Relaxation, Relationships, Spirituality, Health
@@ -39,7 +39,7 @@ app.layout = html.Div([
 
         # Graph in the center
         html.Div([
-            dcc.Graph(id="wheel-graph", style={"width": "100%", "height": "60vh"})
+            dcc.Graph(id="wheel-graph", style={"width": "100%", "height": "90vh"})
         ], style={"width": "50%", "display": "inline-block", "verticalAlign": "top"}),
 
         # Right side sliders
@@ -52,7 +52,7 @@ app.layout = html.Div([
                     max=10,
                     step=1,
                     value=initial_scores[i],
-                    marks={j: str(j) for j in range(0, 11)},
+                    marks={j: str(j) for j in range(0, 11)},  # Add "0" back to the sliders
                     tooltip={"placement": "bottom", "always_visible": True}
                 )
             ], style={"marginBottom": "20px"}) for i in [4, 3, 2, 1]  # Career, Family, Finance, Personal Growth
@@ -74,10 +74,21 @@ def update_graph(*values):
     wheel_fig.add_trace(go.Scatterpolar(
         r=scores,
         theta=categories_with_closure,
-        fill='none',
+        fill='toself',  # Make the plot fill solid
         line=dict(color='teal', width=2),
         marker=dict(size=6)
     ))
+
+    # Add individual category lines
+    for category in define_categories:
+        wheel_fig.add_trace(go.Scatterpolar(
+            r=[10, 0],  # Full scale of the radial line
+            theta=[category, category],
+            mode='lines',
+            line=dict(color="gray", dash="dot", width=1),
+            hoverinfo="none",
+            showlegend=False
+        ))
 
     wheel_fig.update_layout(
         polar=dict(
@@ -96,6 +107,11 @@ def update_graph(*values):
                 visible=True,
                 range=[0, 10],
                 tickfont=dict(size=12, family="serif", color="teal"),
+                ticks="outside",  # Place ticks outside the grid lines
+                tickangle=0,
+                tickmode="linear",
+                tickvals=list(range(1, 11)),  # Start ticks from 1 instead of 0
+                ticktext=[str(val) for val in range(1, 11)],
                 showline=True,
                 linewidth=2,
                 linecolor="teal",
