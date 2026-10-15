@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { arcPath } from "@/lib/wheel/geometry";
 import {
-  LABEL_INSET_DEG,
+  LABEL_GAP,
+  LABEL_OUTSET_DEG,
   LABEL_OFFSET,
   LIFEWHEEL_RADIUS as R,
   LIFEWHEEL_SIZE as SIZE,
@@ -96,12 +97,15 @@ describe("ringRadii", () => {
 
 describe("labelArcs", () => {
   const r = R + LABEL_OFFSET;
+  const toLen = (deg: number) => (r * deg * Math.PI) / 180;
 
-  it("one arc per sector at R + 16, inset 3° each side", () => {
+  it("one arc per sector at R + 24, extending 4° beyond each boundary", () => {
+    expect(LABEL_OFFSET).toBe(24);
+    expect(LABEL_OUTSET_DEG).toBe(4);
     const arcs = labelArcs(8, R);
     expect(arcs).toHaveLength(8);
-    expect(arcs[0].d).toBe(arcPath(r, LABEL_INSET_DEG, 45 - LABEL_INSET_DEG, SIZE, false));
-    expect(arcs[3].d).toBe(arcPath(r, 135 + LABEL_INSET_DEG, 180 - LABEL_INSET_DEG, SIZE, true));
+    expect(arcs[0].d).toBe(arcPath(r, -4, 49, SIZE, false));
+    expect(arcs[3].d).toBe(arcPath(r, 131, 184, SIZE, true));
   });
 
   it("reverses the lower half (centre in (90, 270)) so text reads upright", () => {
@@ -120,11 +124,16 @@ describe("labelArcs", () => {
     expect(labelArcs(2, R).map((a) => a.reversed)).toEqual([false, false]);
   });
 
-  it("available length is the inset arc length", () => {
-    const toLen = (deg: number) => (r * deg * Math.PI) / 180;
-    expect(labelArcs(8, R)[0].available).toBeCloseTo(toLen(39), 9);
-    expect(labelArcs(3, R)[0].available).toBeCloseTo(toLen(114), 9);
-    expect(labelArcs(12, R)[0].available).toBeCloseTo(toLen(24), 9);
+  it("available length is the outset arc length; pitch is the sector arc", () => {
+    expect(labelArcs(8, R)[0].available).toBeCloseTo(toLen(53), 9);
+    expect(labelArcs(9, R)[0].available).toBeCloseTo(toLen(48), 9);
+    expect(labelArcs(3, R)[0].available).toBeCloseTo(toLen(128), 9);
+    expect(labelArcs(12, R)[0].available).toBeCloseTo(toLen(38), 9);
+    expect(labelArcs(8, R)[0].pitch).toBeCloseTo(toLen(45), 9);
+  });
+
+  it("labels stay inside the 600 viewBox", () => {
+    expect(R + LABEL_OFFSET + LABEL_BASE_SIZE).toBeLessThan(SIZE / 2);
   });
 
   it("n <= 0 gives nothing", () => {
@@ -133,9 +142,12 @@ describe("labelArcs", () => {
 });
 
 describe("fitLabels", () => {
-  const arc8 = labelArcs(8, R)[0].available; // about 167 units
+  /** Width estimate used by fitLabels (fitLabel's 0.56 em over CAPS_FIT). */
+  const width = (f: { text: string; fontSize: number }) =>
+    (f.text.length * 0.56 * f.fontSize) / CAPS_FIT;
   const sizeFor = (text: string, available: number) =>
     (available * CAPS_FIT) / (text.length * 0.56);
+  const ROOM = 150;
 
   it("uses base 19 and min 10", () => {
     expect(LABEL_BASE_SIZE).toBe(19);
@@ -143,13 +155,13 @@ describe("fitLabels", () => {
   });
 
   it("short labels all get the base size", () => {
-    const fits = fitLabels(["HEALTH", "FAMILY", "CAREER"], [arc8, arc8, arc8]);
+    const fits = fitLabels(["HEALTH", "FAMILY", "CAREER"], [ROOM, ROOM, ROOM]);
     expect(fits.map((f) => f.fontSize)).toEqual([19, 19, 19]);
   });
 
   it("all labels share the smallest non-italic fitted size", () => {
-    const fits = fitLabels(["HEALTH", "PERSONAL GROWTH", "SPIRITUALITY"], [arc8, arc8, arc8]);
-    const shared = sizeFor("PERSONAL GROWTH", arc8);
+    const fits = fitLabels(["HEALTH", "PERSONAL GROWTH", "SPIRITUALITY"], [ROOM, ROOM, ROOM]);
+    const shared = sizeFor("PERSONAL GROWTH", ROOM);
     expect(shared).toBeLessThan(19);
     fits.forEach((f) => expect(f.fontSize).toBeCloseTo(shared, 9));
     expect(fits.map((f) => f.text)).toEqual(["HEALTH", "PERSONAL GROWTH", "SPIRITUALITY"]);
@@ -158,31 +170,75 @@ describe("fitLabels", () => {
   it("italic labels do not set the shared size but shrink on their own", () => {
     const fits = fitLabels(
       ["HEALTH", "FAMILY", "HOBBIES (ARCHIVED)"],
-      [arc8, arc8, arc8],
+      [ROOM, ROOM, ROOM],
       [false, false, true],
     );
     expect(fits[0].fontSize).toBe(19);
     expect(fits[1].fontSize).toBe(19);
-    expect(fits[2].fontSize).toBeCloseTo(sizeFor("HOBBIES (ARCHIVED)", arc8), 9);
+    expect(fits[2].fontSize).toBeCloseTo(sizeFor("HOBBIES (ARCHIVED)", ROOM), 9);
     expect(fits[2].text).toBe("HOBBIES (ARCHIVED)");
   });
 
   it("a short italic label never exceeds the shared size", () => {
-    const fits = fitLabels(["PERSONAL GROWTH", "OLD"], [arc8, arc8], [false, true]);
+    const fits = fitLabels(["PERSONAL GROWTH", "OLD"], [ROOM, ROOM], [false, true]);
     expect(fits[1].fontSize).toBeCloseTo(fits[0].fontSize, 9);
   });
 
   it("with no non-italic labels, each fits from the base size", () => {
-    const fits = fitLabels(["OLD", "HOBBIES (ARCHIVED)"], [arc8, arc8], [true, true]);
+    const fits = fitLabels(["OLD", "HOBBIES (ARCHIVED)"], [ROOM, ROOM], [true, true]);
     expect(fits[0].fontSize).toBe(19);
     expect(fits[1].fontSize).toBeLessThan(19);
   });
 
   it("a non-italic label truncated at the minimum pulls everyone to the minimum", () => {
-    const arc12 = labelArcs(12, R)[0].available; // about 103 units
-    const fits = fitLabels(["RELATIONSHIPS AND COMMUNITY LIFE", "B"], [arc12, arc12]);
+    const fits = fitLabels(["RELATIONSHIPS AND COMMUNITY LIFE", "B"], [100, 100]);
     expect(fits.map((f) => f.fontSize)).toEqual([10, 10]);
     expect(fits[0].text).toMatch(/^RELATIONSHIP.*…$/);
     expect(fits[1].text).toBe("B");
+  });
+
+  describe("neighbour guard", () => {
+    // Each label fits its own arc at 19, but two long neighbours would overlap.
+    const texts = ["RELATIONSHIPS", "SPIRITUALITY", "A", "B", "C", "D"];
+    const pitch = 150;
+    const avail = Array(6).fill(250);
+
+    it("two long non-italic neighbours lower the shared size until they clear", () => {
+      const free = fitLabels(texts, avail);
+      expect(free[0].fontSize).toBe(19);
+      expect((width(free[0]) + width(free[1])) / 2).toBeGreaterThan(pitch - LABEL_GAP);
+
+      const fits = fitLabels(texts, avail, [], pitch);
+      const expected = (2 * (pitch - LABEL_GAP) * CAPS_FIT) / (0.56 * 25);
+      fits.forEach((f) => expect(f.fontSize).toBeCloseTo(expected, 9));
+      expect((width(fits[0]) + width(fits[1])) / 2).toBeCloseTo(pitch - LABEL_GAP, 9);
+    });
+
+    it("checks the wrap-around pair", () => {
+      const wrapped = ["SPIRITUALITY", "A", "B", "C", "D", "RELATIONSHIPS"];
+      const fits = fitLabels(wrapped, avail, [], pitch);
+      expect((width(fits[5]) + width(fits[0])) / 2).toBeLessThanOrEqual(pitch - LABEL_GAP + 1e-9);
+      expect(fits[0].fontSize).toBeLessThan(19);
+    });
+
+    it("a non-binding guard changes nothing", () => {
+      expect(fitLabels(texts, avail, [], 1000)).toEqual(fitLabels(texts, avail));
+    });
+
+    it("an italic neighbour shrinks on its own instead of lowering the shared size", () => {
+      const fits = fitLabels(texts, avail, [false, true], pitch);
+      expect(fits[0].fontSize).toBe(19);
+      expect(fits[2].fontSize).toBe(19);
+      expect(fits[1].fontSize).toBeLessThan(19);
+      expect((width(fits[0]) + width(fits[1])) / 2).toBeLessThanOrEqual(pitch - LABEL_GAP + 1e-9);
+    });
+
+    it("at the minimum size, overlapping neighbours get half the room each", () => {
+      const long = ["RELATIONSHIPS AND MORE", "SPIRITUALITY AND MORE", "A"];
+      const fits = fitLabels(long, [400, 400, 400], [], 60);
+      expect(fits[0].fontSize).toBe(10);
+      expect(fits[0].text.endsWith("…")).toBe(true);
+      expect((width(fits[0]) + width(fits[1])) / 2).toBeLessThanOrEqual(60 - LABEL_GAP + 1e-9);
+    });
   });
 });

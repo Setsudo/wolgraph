@@ -117,13 +117,17 @@ describe("LifeWheel", () => {
     expect(size(archived)).toBeGreaterThanOrEqual(10);
   });
 
-  it("leaves room for wide uppercase glyphs", () => {
-    // n = 8: the inset arc is about 167 units; caps run about 0.76 em each.
+  it("the eight reference categories all get the base size, clear of neighbours", () => {
+    // Label radius 254: each outset arc is 53° (about 235 units), pitch 45° (about 199.5).
     const c = wheel();
-    const growth = all(c, "label")[1];
-    const size = Number(growth.getAttribute("font-size"));
-    expect(size).toBeLessThan(19);
-    expect(15 * 0.76 * size).toBeLessThanOrEqual(167);
+    const labels = all(c, "label");
+    labels.forEach((l) => expect(l.getAttribute("font-size")).toBe("19"));
+    const pitch = (254 * 45 * Math.PI) / 180;
+    const width = (t: string) => (t.length * 0.56 * 19) / 0.73;
+    EIGHT.forEach((t, i) => {
+      const next = EIGHT[(i + 1) % 8];
+      expect((width(t) + width(next)) / 2).toBeLessThanOrEqual(pitch - 8);
+    });
   });
 
   it("sets italic per label", () => {

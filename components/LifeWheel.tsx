@@ -54,6 +54,7 @@ export function LifeWheel({
     labels.map((l) => l.toUpperCase()),
     arcs.map((a) => a.available),
     italic,
+    arcs[0]?.pitch,
   );
   const path = polygonPath(data);
 
