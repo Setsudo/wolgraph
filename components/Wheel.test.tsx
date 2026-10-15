@@ -67,10 +67,16 @@ describe("Wheel", () => {
     expect(activeLabel()).toBe("Health, Sleep, 7.5 hours");
     fireEvent.keyDown(g, { key: "ArrowRight" });
     expect(activeLabel()).toBe("Health, Exercise, 1 hours");
+    // The outer ring holds only subs: Health's then Career's.
     fireEvent.keyDown(g, { key: "ArrowRight" });
-    expect(activeLabel()).toBe("Personal Growth, general, 0 hours");
+    expect(activeLabel()).toBe("Career, Deep work, 4 hours");
     fireEvent.keyDown(g, { key: "ArrowUp" });
-    expect(activeLabel()).toBe("Personal Growth, general, 0 hours");
+    expect(activeLabel()).toBe("Career, general, 0 hours");
+    // A subless main spans both rings: Down stays put.
+    fireEvent.keyDown(g, { key: "ArrowRight" });
+    expect(activeLabel()).toBe("Relaxation, general, 1 hours");
+    fireEvent.keyDown(g, { key: "ArrowDown" });
+    expect(activeLabel()).toBe("Relaxation, general, 1 hours");
     expect(g.querySelector("[data-testid=selection]")).not.toBeNull();
   });
 
@@ -98,12 +104,41 @@ describe("Wheel", () => {
     expect(amber).toHaveLength(2);
   });
 
-  it("labels the rings: names inside, sub names and hours outside", () => {
+  it("renders every name on its own arc with a textPath", () => {
     const { container } = render(<Harness />);
-    const text = container.textContent ?? "";
-    expect(text).toContain("Personal Gr…");
-    expect(text).toContain("Deep wo…");
-    expect(text).toContain("Sleep");
-    expect(text).toContain("7.5");
+    const paths = [...container.querySelectorAll("textPath")];
+    expect(paths).toHaveLength(segments.length);
+    const names = paths.map((p) => p.textContent);
+    for (const name of [
+      "Health",
+      "Personal Growth",
+      "Relationships",
+      "Sleep",
+      "Exercise",
+      "Deep work",
+      "Meetings",
+    ]) {
+      expect(names).toContain(name);
+    }
+    for (const p of paths) {
+      expect(p.getAttribute("startOffset")).toBe("50%");
+      const href = p.getAttribute("href")!;
+      const arc = container.querySelector(`defs ${href}`);
+      expect(arc?.tagName).toBe("path");
+      expect(arc?.getAttribute("d")).toMatch(/^M [\d.]+ [\d.]+ A /);
+      const text = p.parentElement!;
+      expect(text.getAttribute("text-anchor")).toBe("middle");
+      expect(text.getAttribute("dominant-baseline")).toBe("central");
+      const size = Number(text.getAttribute("font-size"));
+      expect(size).toBeGreaterThanOrEqual(9);
+      expect(size).toBeLessThanOrEqual(14);
+    }
+  });
+
+  it("shows hours for subs and subless mains with time, and none at zero", () => {
+    const { container } = render(<Harness />);
+    const hourTexts = [...container.querySelectorAll("text[transform]")].map((t) => t.textContent);
+    // Sleep, Exercise, Deep work, Meetings, Family, Relaxation.
+    expect(hourTexts.sort()).toEqual(["1", "1", "2", "2", "4", "7.5"]);
   });
 });
