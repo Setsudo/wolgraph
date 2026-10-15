@@ -6,7 +6,7 @@ Each task names its tier, dependencies and verification. Spec: `docs/SPEC.md`. S
 Next.js 16 App Router + TypeScript strict + Tailwind 4 at the repo root, npm. Add Vitest (jsdom for components), Playwright, ESLint (next config), Prettier, `@supabase/supabase-js`, `@supabase/ssr`. Theme tokens from SPEC §7 in `app/globals.css`. Route skeletons from SPEC §4 rendering placeholders. `.env.example` with `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. GitHub Actions workflow: install, lint, typecheck, unit tests. Update `filemap.md`.
 Verify: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build` all pass; dev server renders each route.
 
-## 2. [ ] Database schema, RLS, seed (Careful; after 1)
+## 2. [x] Database schema, RLS, seed (Careful; after 1)
 `supabase/migrations/0001_init.sql` implementing SPEC §5 exactly: tables, checks, parent-is-main and one-level constraint (trigger), partial unique index, RLS policies, `seed_default_categories()` called by a trigger on `auth.users` insert. Generate `lib/data/types.ts` by hand to match.
 Verify: Vitest suite runs the migration in PGlite with a stub `auth` schema (`auth.users`, `auth.uid()` reading a session setting) and asserts: seed creates 8 mains; hours check rejects 0.1 and 25; sub-of-sub rejected; RLS isolates two users for all four operations.
 

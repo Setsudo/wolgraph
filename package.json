@@ -21,6 +21,7 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.10",
     "@playwright/test": "~1.64",
     "@tailwindcss/turbopack": "^4",
     "@testing-library/dom": "^10.4.2",

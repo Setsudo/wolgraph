@@ -18,3 +18,7 @@
 - `app/(app)/day/[date]/page.tsx`, `app/(app)/trends/page.tsx`, `app/(app)/categories/page.tsx` — app screens (placeholders)
 - `lib/date.ts` — local-date helpers (`todayLocal`)
 - `lib/wheel/geometry.ts` — pure two-ring wheel layout, SVG paths, hit testing, fill opacity
+- `supabase/migrations/` — SQL migrations (schema, RLS, seed); add new files, never edit applied ones
+- `supabase/test/auth_stub.sql` — stub `auth` schema and roles so migrations run in PGlite tests
+- `lib/data/types.ts` — `Database` and row types matching the migrations
+- `lib/data/schema.test.ts` — schema, constraint and RLS tests (PGlite)
