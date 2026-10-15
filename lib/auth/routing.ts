@@ -1,4 +1,4 @@
-const PROTECTED_PREFIXES = ["/day", "/trends", "/categories"];
+const PROTECTED_PREFIXES = ["/rate", "/day", "/trends", "/categories"];
 const STATIC_ASSET = /\.(?:svg|png|jpe?g|gif|webp|ico|css|js|map|txt|woff2?)$/i;
 
 function matchesPrefix(pathname: string, prefix: string): boolean {

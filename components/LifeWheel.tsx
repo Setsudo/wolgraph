@@ -21,6 +21,8 @@ export type LifeWheelProps = {
   ringLabel: (v: number) => string;
   ariaLabel: string;
   italic?: boolean[];
+  /** Width cap class; defaults to max-w-[560px]. */
+  maxWidthClass?: string;
 };
 
 /**
@@ -35,6 +37,7 @@ export function LifeWheel({
   ringLabel,
   ariaLabel,
   italic,
+  maxWidthClass = "max-w-[560px]",
 }: LifeWheelProps) {
   const idPrefix = useId();
   // Referenced by URL fragment from <textPath href>, so keep it to safe characters.
@@ -63,7 +66,7 @@ export function LifeWheel({
       viewBox={`0 0 ${SIZE} ${SIZE}`}
       role="img"
       aria-label={ariaLabel}
-      className="mx-auto block w-full max-w-[560px] overflow-visible"
+      className={`mx-auto block w-full ${maxWidthClass} overflow-visible`}
     >
       <defs>
         {arcs.map((a, i) => (

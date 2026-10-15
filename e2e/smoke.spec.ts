@@ -15,7 +15,12 @@ test("trends without a session ends on login", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Wheel of Life" })).toBeVisible();
 });
 
-test("/ goes to today's day page, then to login without a session", async ({ page }) => {
+test("/ goes to the rate screen, then to login without a session", async ({ page }) => {
   await page.goto("/");
-  await expect(page).toHaveURL(/\/login\?next=%2Fday%2F\d{4}-\d{2}-\d{2}$/);
+  await expect(page).toHaveURL(/\/login\?next=%2Frate$/);
+});
+
+test("/day goes to login without a session", async ({ page }) => {
+  await page.goto("/day");
+  await expect(page).toHaveURL(/\/login\?next=%2Fday$/);
 });

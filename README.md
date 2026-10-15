@@ -8,6 +8,7 @@ Wheel of Life: log hours per life area each day on a two-ring wheel, and see wee
 
 1. Create a free project at [supabase.com](https://supabase.com/dashboard).
 2. **SQL Editor → New query**: paste all of `supabase/migrations/0001_init.sql` and run it. This creates the tables, row-level security and the trigger that seeds the eight default categories on first sign-in.
+   Then, in a new query, paste and run `supabase/migrations/0002_ratings.sql` (the 0-10 life ratings behind the home screen). Until it runs, the home screen works but shows that scores aren't saved.
 3. **Authentication → URL Configuration**:
    - Site URL: your Vercel production URL (or `http://localhost:3000` until you have one).
    - Redirect URLs: add `http://localhost:3000/**` and `https://*-<your-vercel-team-slug>.vercel.app/**` (covers preview deployments), plus your production URL followed by `/**`.
@@ -41,4 +42,4 @@ npm run dev                  # http://localhost:3000
 | `npm run e2e` | Playwright smoke tests |
 | `npm run build` | Production build |
 
-Dev-only previews with fixture data (no sign-in, 404 in production): `/dev/day-preview`, `/dev/trends-preview`, `/dev/categories-preview`.
+Dev-only previews with fixture data (no sign-in, 404 in production): `/dev/rate-preview`, `/dev/day-preview`, `/dev/trends-preview`, `/dev/categories-preview`.

@@ -118,3 +118,26 @@ Palette carried from the slider prototype: cream `#F8F1E4` background, navy `#1F
 - [ ] Daily entry for 8 categories takes under 2 minutes on a phone; pages render data in under 2 s on Vercel.
 - [ ] Lint, typecheck, unit tests and e2e smoke pass in GitHub Actions; deployed on Vercel.
 - [ ] Screenshots of all four screens at 390 px and 1440 px reviewed.
+
+## 10. Rate your life
+
+Owner-approved 2026-10-15. The home page (`/`, nav "Wheel") is a "Wheel of Life" self-rating screen modelled on `docs/design/reference-wheel.png`: each active main category gets a 0-10 slider, and the wheel in the middle plots the current values (one sector per main, rings 1-10).
+
+- Ratings are for today only (the browser-local date, passed as `/rate?day=`); no day navigation yet. A slider shows today's score, else the most recent earlier score, else 5.
+- Only a slider the user moves is saved: optimistic, debounced 400 ms per category, rollback and error toast on failure, a small "Saved" status.
+- From 768px: sliders in two side columns beside their sectors (right: indices k..1, left: k+1..n-1 then 0, k = floor(n/2)). Phones: wheel, then all sliders in category order.
+- If the `ratings` table is missing, sliders still move the wheel, nothing is saved, and an amber notice says so.
+
+```sql
+ratings (
+  user_id     uuid not null references auth.users on delete cascade,
+  category_id uuid not null,
+  day         date not null,
+  score       smallint not null check (score between 0 and 10),
+  updated_at  timestamptz not null default now(),
+  primary key (user_id, category_id, day),
+  foreign key (category_id, user_id) references categories (id, user_id)
+)
+-- trigger: category must be a main category (parent_id is null)
+-- RLS: user_id = auth.uid() for select, insert, update, delete; anon has no access
+```

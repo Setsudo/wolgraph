@@ -2,16 +2,19 @@ import { describe, expect, it } from "vitest";
 import { decideRedirect, sanitizeNext } from "./routing";
 
 describe("decideRedirect", () => {
-  it.each(["/day/2026-10-15", "/day", "/trends", "/trends/week", "/categories"])(
+  it.each(["/rate", "/day/2026-10-15", "/day", "/trends", "/trends/week", "/categories"])(
     "sends signed-out %s to login with next",
     (path) => {
       expect(decideRedirect(path, false)).toBe(`/login?next=${encodeURIComponent(path)}`);
     },
   );
 
-  it.each(["/day/2026-10-15", "/trends", "/categories"])("lets signed-in %s through", (path) => {
-    expect(decideRedirect(path, true)).toBeNull();
-  });
+  it.each(["/rate", "/day/2026-10-15", "/trends", "/categories"])(
+    "lets signed-in %s through",
+    (path) => {
+      expect(decideRedirect(path, true)).toBeNull();
+    },
+  );
 
   it("sends signed-in /login to /", () => {
     expect(decideRedirect("/login", true)).toBe("/");
@@ -37,6 +40,7 @@ describe("decideRedirect", () => {
   it("does not treat lookalike prefixes as protected", () => {
     expect(decideRedirect("/dayz", false)).toBeNull();
     expect(decideRedirect("/trendsetter", false)).toBeNull();
+    expect(decideRedirect("/rates", false)).toBeNull();
   });
 
   it("leaves everything else alone", () => {
