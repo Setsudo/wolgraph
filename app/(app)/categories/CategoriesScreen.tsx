@@ -8,6 +8,7 @@ import {
   PALETTE,
   validateCategoryName,
   type ActionResult,
+  type ArchiveResult,
   type Category,
   type CategoryActions,
 } from "@/lib/data/categoryRules";
@@ -29,7 +30,8 @@ type Editor =
   | { kind: "addSub"; parentId: string; value: string; error: string | null }
   | { kind: "addMain"; value: string; color: string; error: string | null };
 
-type Toast = { id: string; name: string };
+/** archivedIds: what the archive action archived, the category first; Undo restores exactly these. */
+type Toast = { id: string; name: string; archivedIds: string[] };
 
 export function CategoriesScreen({
   categories,
@@ -54,7 +56,10 @@ export function CategoriesScreen({
   const subsOf = (mainId: string) => active.filter((c) => c.parent_id === mainId).sort(bySortOrder);
   const byId = new Map(categories.map((c) => [c.id, c]));
 
-  async function run(key: string, action: () => Promise<ActionResult>): Promise<ActionResult> {
+  async function run<R extends ActionResult | ArchiveResult>(
+    key: string,
+    action: () => Promise<R>,
+  ): Promise<R | { ok: false; message: string }> {
     setBusy((prev) => new Set(prev).add(key));
     try {
       return await action();
@@ -113,7 +118,7 @@ export function CategoriesScreen({
     setRowError(category.id, null);
     const result = await run(category.id, () => actions.archive(category.id));
     if (result.ok) {
-      setToast({ id: category.id, name: category.name });
+      setToast({ id: category.id, name: category.name, archivedIds: result.archivedIds });
       setEditor((prev) =>
         prev &&
         "id" in prev &&
@@ -132,16 +137,25 @@ export function CategoriesScreen({
     if (!result.ok) setRowError(id, result.message);
   }
 
+  /** Reverses one archive: the category first, then the subs that archive took with it. */
   async function undo(current: Toast) {
     setToast(null);
-    await restore(current.id);
+    for (const id of current.archivedIds) {
+      setRowError(id, null);
+      const result = await run(id, () => actions.restore(id));
+      if (!result.ok) {
+        setRowError(id, result.message);
+        if (id === current.id) return;
+      }
+    }
   }
 
   const archived = archivedList(categories);
   const addMainBusy = busy.has("add-main");
 
   return (
-    <div className="mx-auto w-full max-w-[640px]">
+    // pb-24 keeps the last row clear of the fixed undo toast.
+    <div className="mx-auto w-full max-w-[640px] pb-24">
       <CategoriesHeading />
 
       <ul className="mt-4 flex flex-col gap-3">

@@ -7,12 +7,15 @@ export type Category = CategoryRow;
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
 
+/** Archive also reports every id it archived (the category, then any subs it took with it), for Undo. */
+export type ArchiveResult = { ok: true; archivedIds: string[] } | { ok: false; message: string };
+
 /** Mutations the Categories screen calls; Server Actions in the app, fakes in the dev preview. */
 export type CategoryActions = {
   addMain: (name: string, color: string) => Promise<ActionResult>;
   addSub: (parentId: string, name: string) => Promise<ActionResult>;
   rename: (id: string, name: string) => Promise<ActionResult>;
-  archive: (id: string) => Promise<ActionResult>;
+  archive: (id: string) => Promise<ArchiveResult>;
   restore: (id: string) => Promise<ActionResult>;
 };
 

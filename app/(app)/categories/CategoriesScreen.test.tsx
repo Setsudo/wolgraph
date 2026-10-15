@@ -92,7 +92,7 @@ describe("CategoriesScreen", () => {
     expect(screen.getAllByRole("radio")).toHaveLength(8);
   });
 
-  it("archiving a main archives its subs; undo restores only the main", async () => {
+  it("archiving a main archives its subs; restoring the main from Archived restores only the main", async () => {
     setup();
     fireEvent.click(screen.getByRole("button", { name: "Archive Health" }));
     await screen.findByText("Archived Health.");
@@ -101,10 +101,37 @@ describe("CategoriesScreen", () => {
     expect(screen.getByText("Archived (5)")).toBeTruthy();
     expect(within(archivedSection()).getAllByText("in Health")).toHaveLength(2);
 
-    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    fireEvent.click(screen.getByRole("button", { name: "Restore Health" }));
     await screen.findByRole("button", { name: "Archive Health" });
     expect(screen.queryByRole("button", { name: "Archive Sleep" })).toBeNull();
     expect(screen.getByText("Archived (4)")).toBeTruthy();
+  });
+
+  it("undo reverses exactly what the archive did: main and the subs it archived", async () => {
+    const initial = [
+      ...FIXTURE_CATEGORIES,
+      {
+        ...FIXTURE_CATEGORIES.find((c) => c.id === "sleep")!,
+        id: "naps",
+        name: "Naps",
+        sort_order: 2,
+        archived_at: "2026-02-01T00:00:00.000Z",
+      },
+    ];
+    render(<PreviewHarness initial={initial} delayMs={0} />);
+    expect(screen.getByText("Archived (3)")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Archive Health" }));
+    await screen.findByText("Archived Health.");
+    expect(screen.getByText("Archived (6)")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    await screen.findByRole("button", { name: "Archive Exercise" });
+    expect(screen.getByRole("button", { name: "Archive Health" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Archive Sleep" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Archive Naps" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Restore Naps" })).toBeTruthy();
+    expect(screen.getByText("Archived (3)")).toBeTruthy();
   });
 
   it("refuses to restore a sub whose main is archived", async () => {

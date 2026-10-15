@@ -12,6 +12,7 @@ import {
   restoreMainFirstMessage,
   validateName,
   type ActionResult,
+  type ArchiveResult,
   type Category,
 } from "./categoryRules";
 
@@ -20,9 +21,11 @@ type DbError = { code?: string } | null;
 
 const UNIQUE_VIOLATION = "23505";
 
-async function withUser(
-  run: (supabase: Client, userId: string) => Promise<ActionResult>,
-): Promise<ActionResult> {
+type Failure = { ok: false; message: string };
+
+async function withUser<R extends ActionResult | ArchiveResult>(
+  run: (supabase: Client, userId: string) => Promise<R>,
+): Promise<R | Failure> {
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.getUser();
@@ -33,7 +36,7 @@ async function withUser(
   }
 }
 
-function fail(error?: DbError): ActionResult {
+function fail(error?: DbError): Failure {
   return {
     ok: false,
     message: error?.code === UNIQUE_VIOLATION ? DUPLICATE_MESSAGE : GENERIC_ERROR_MESSAGE,
@@ -130,28 +133,31 @@ export async function renameCategory(id: string, name: string): Promise<ActionRe
   });
 }
 
-/** Archives the category; archiving a main also archives its active subs. */
-export async function archiveCategory(id: string): Promise<ActionResult> {
+/** Archives the category; archiving a main also archives its active subs. Returns the ids archived. */
+export async function archiveCategory(id: string): Promise<ArchiveResult> {
   if (!isString(id)) return fail();
-  return withUser(async (supabase) => {
+  return withUser<ArchiveResult>(async (supabase) => {
     const now = new Date().toISOString();
     const { data, error } = await supabase
       .from("categories")
       .update({ archived_at: now })
       .eq("id", id)
       .is("archived_at", null)
-      .select("parent_id");
+      .select("id, parent_id");
     if (error) return fail(error);
     if (data.length !== 1) return fail();
+    const archivedIds = [data[0].id];
     if (data[0].parent_id === null) {
-      const { error: subsError } = await supabase
+      const { data: subs, error: subsError } = await supabase
         .from("categories")
         .update({ archived_at: now })
         .eq("parent_id", id)
-        .is("archived_at", null);
+        .is("archived_at", null)
+        .select("id");
       if (subsError) return fail(subsError);
+      archivedIds.push(...subs.map((sub) => sub.id));
     }
-    return { ok: true };
+    return { ok: true, archivedIds };
   });
 }
 

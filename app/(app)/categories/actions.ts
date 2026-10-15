@@ -8,9 +8,9 @@ import {
   renameCategory,
   restoreCategory,
 } from "@/lib/data/categories";
-import type { ActionResult } from "@/lib/data/categoryRules";
+import type { ActionResult, ArchiveResult } from "@/lib/data/categoryRules";
 
-function afterSuccess(result: ActionResult): ActionResult {
+function afterSuccess<R extends ActionResult | ArchiveResult>(result: R): R {
   if (result.ok) {
     revalidatePath("/categories");
     revalidatePath("/day", "layout");
@@ -30,7 +30,7 @@ export async function rename(id: string, name: string): Promise<ActionResult> {
   return afterSuccess(await renameCategory(id, name));
 }
 
-export async function archive(id: string): Promise<ActionResult> {
+export async function archive(id: string): Promise<ArchiveResult> {
   return afterSuccess(await archiveCategory(id));
 }
 

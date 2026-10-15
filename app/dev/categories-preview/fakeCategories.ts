@@ -9,6 +9,7 @@ import {
   restoreMainFirstMessage,
   validateName,
   type ActionResult,
+  type ArchiveResult,
   type Category,
 } from "@/lib/data/categoryRules";
 
@@ -59,7 +60,7 @@ export type FakeOp =
   | { type: "archive"; id: string }
   | { type: "restore"; id: string };
 
-export type FakeResult = { result: ActionResult; categories: Category[] };
+export type FakeResult = { result: ActionResult | ArchiveResult; categories: Category[] };
 
 let nextId = 0;
 
@@ -112,13 +113,20 @@ export function applyFakeOp(categories: Category[], op: FakeOp, now: string): Fa
       const target = find(op.id);
       if (!target || target.archived_at !== null) return failed(categories, GENERIC_ERROR_MESSAGE);
       const isMain = target.parent_id === null;
-      return ok(
-        categories.map((c) =>
-          c.id === op.id || (isMain && c.parent_id === op.id && c.archived_at === null)
-            ? { ...c, archived_at: now }
-            : c,
+      const archivedIds = [
+        target.id,
+        ...(isMain
+          ? categories
+              .filter((c) => c.parent_id === op.id && c.archived_at === null)
+              .map((c) => c.id)
+          : []),
+      ];
+      return {
+        result: { ok: true, archivedIds },
+        categories: categories.map((c) =>
+          archivedIds.includes(c.id) ? { ...c, archived_at: now } : c,
         ),
-      );
+      };
     }
     case "restore": {
       const target = find(op.id);
