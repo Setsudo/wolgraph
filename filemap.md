@@ -15,9 +15,10 @@
 - `.env.example` — required env vars (Supabase URL and anon key)
 - `.github/workflows/ci.yml` — CI: install, lint, typecheck, unit tests
 - `app/layout.tsx`, `app/globals.css` — root layout; theme tokens (`@theme`)
-- `app/page.tsx` — redirects to `/day/<today>`
+- `app/page.tsx` (+ `page.test.tsx`) — redirects `/` to `/rate` (home); the test also covers `/day`
 - `app/(auth)/login/page.tsx` — sign-in (placeholder)
-- `app/(app)/layout.tsx` — signed-in shell with main nav
+- `app/(app)/layout.tsx` — signed-in shell with main nav (Wheel, Day, Trends, Categories)
+- `app/(app)/day/page.tsx` — client redirect from `/day` to `/day/<browser-local today>`
 - `app/(app)/day/[date]/page.tsx`, `app/(app)/trends/page.tsx` — app screens (placeholders)
 - `app/(app)/categories/page.tsx` — Categories screen (loads categories, passes Server Actions)
 - `app/(app)/categories/CategoriesScreen.tsx` — client UI: add/rename/archive, Archived section, undo toast
@@ -60,3 +61,13 @@
 - `components/HourSheet.tsx` — hours stepper: bottom sheet on phones, side panel from 768px
 - `components/useLocalToday.ts` — browser-local today (null during SSR)
 - `app/dev/day-preview/` — dev-only day screen preview with fixtures and a fake save (`?fail=1`); 404 in production
+- `supabase/migrations/0002_ratings.sql` — `ratings` table (0-10 per main category per day), main-only trigger, RLS
+- `app/(app)/rate/page.tsx` — Rate your life screen (home): reads `?day` (browser-local today), loads ratings, renders `RateView`
+- `app/(app)/rate/actions.ts` (+ test) — `saveRating` Server Action (0-10 integer, future-day guard, upsert, revalidates `/rate`)
+- `lib/data/ratings.ts` (+ test) — `getRatings(day)`: active mains, the day's scores, previous scores, `available` (false when the table is missing)
+- `lib/rate/layout.ts` (+ test) — `sideOrder(n)`: which mains go in the left and right slider columns
+- `lib/rate/score.ts` (+ test) — score range, `isValidScore`, `displayedScore` (today > previous > 5)
+- `components/RateView.tsx` (+ test) — rate screen client: wheel, sliders, optimistic debounced saves, rollback toast, missing-table notice
+- `components/RatingSlider.tsx` (+ test) — 0-10 range slider with tick numbers and a value box under the thumb
+- `components/RateTodayGate.tsx` — sends `/rate` to `/rate?day=<browser-local today>`
+- `app/dev/rate-preview/` — dev-only rate screen preview with fixtures and a fake save (`?unavailable=1`, `?fail=1`); 404 in production

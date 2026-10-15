@@ -1,8 +1,8 @@
-// Hand-written to match supabase/migrations/0001_init.sql, shaped like the
+// Hand-written to match supabase/migrations/ (0001_init.sql, 0002_ratings.sql), shaped like the
 // output of `supabase gen types typescript` so it works with
 // createClient<Database>(). Keep in sync with every migration.
 //
-// Postgres -> TS: uuid, text, date, timestamptz -> string; int, numeric -> number.
+// Postgres -> TS: uuid, text, date, timestamptz -> string; int, smallint, numeric -> number.
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -102,6 +102,41 @@ export type Database = {
           },
         ];
       };
+      ratings: {
+        Row: {
+          user_id: string;
+          /** A main category (parent_id null); enforced by trigger */
+          category_id: string;
+          /** YYYY-MM-DD */
+          day: string;
+          /** Integer 0-10 (smallint) */
+          score: number;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          category_id: string;
+          day: string;
+          score: number;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          category_id?: string;
+          day?: string;
+          score?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ratings_category_same_user_fkey";
+            columns: ["category_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "categories";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -131,3 +166,7 @@ export type CategoryUpdate = PublicTables["categories"]["Update"];
 export type EntryRow = PublicTables["entries"]["Row"];
 export type EntryInsert = PublicTables["entries"]["Insert"];
 export type EntryUpdate = PublicTables["entries"]["Update"];
+
+export type RatingRow = PublicTables["ratings"]["Row"];
+export type RatingInsert = PublicTables["ratings"]["Insert"];
+export type RatingUpdate = PublicTables["ratings"]["Update"];

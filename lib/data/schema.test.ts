@@ -358,8 +358,146 @@ describe("row-level security", () => {
   });
 });
 
+describe("ratings", () => {
+  const insertRating = (userId: string, categoryId: string, day: string, score: number) =>
+    db.query("insert into ratings (user_id, category_id, day, score) values ($1, $2, $3, $4)", [
+      userId,
+      categoryId,
+      day,
+      score,
+    ]);
+
+  it("accepts 0 and 10, rejects 11 and -1", async () => {
+    const health = await mainId(USER_A, "Health");
+    await insertRating(USER_A, health, "2026-05-01", 0);
+    await insertRating(USER_A, health, "2026-05-02", 10);
+    await expect(insertRating(USER_A, health, "2026-05-03", 11)).rejects.toMatchObject({
+      code: "23514",
+    });
+    await expect(insertRating(USER_A, health, "2026-05-04", -1)).rejects.toMatchObject({
+      code: "23514",
+    });
+  });
+
+  it("rejects a sub-category, on insert and on update", async () => {
+    const career = await mainId(USER_A, "Career");
+    const sub = await addCategory(USER_A, "Side project", career);
+    await expect(insertRating(USER_A, sub, "2026-05-01", 5)).rejects.toMatchObject({
+      code: "23514",
+    });
+    await insertRating(USER_A, career, "2026-05-01", 5);
+    await expect(
+      db.query(
+        "update ratings set category_id = $1 where user_id = $2 and category_id = $3 and day = '2026-05-01'",
+        [sub, USER_A, career],
+      ),
+    ).rejects.toMatchObject({ code: "23514" });
+  });
+
+  it("rejects a rating on another user's category", async () => {
+    await expect(
+      insertRating(USER_A, await mainId(USER_B, "Finance"), "2026-05-01", 5),
+    ).rejects.toMatchObject({ code: "23503" });
+  });
+
+  it("allows one score per category and day", async () => {
+    const finance = await mainId(USER_A, "Finance");
+    await insertRating(USER_A, finance, "2026-05-01", 4);
+    await expect(insertRating(USER_A, finance, "2026-05-01", 6)).rejects.toMatchObject({
+      code: "23505",
+    });
+  });
+
+  it("maintains updated_at on update", async () => {
+    const family = await mainId(USER_A, "Family");
+    await db.query(
+      "insert into ratings (user_id, category_id, day, score, updated_at) values ($1, $2, '2026-05-01', 3, '2000-01-01')",
+      [USER_A, family],
+    );
+    await db.query(
+      "update ratings set score = 4 where user_id = $1 and category_id = $2 and day = '2026-05-01'",
+      [USER_A, family],
+    );
+    const [{ stale }] = await rows<{ stale: boolean }>(
+      "select updated_at < '2001-01-01' as stale from ratings where user_id = $1 and category_id = $2 and day = '2026-05-01'",
+      [USER_A, family],
+    );
+    expect(stale).toBe(false);
+  });
+
+  describe("row-level security", () => {
+    const DAY = "2026-06-01";
+    let relA: string;
+    let relB: string;
+
+    beforeAll(async () => {
+      relA = await mainId(USER_A, "Relationships");
+      relB = await mainId(USER_B, "Relationships");
+      await insertRating(USER_A, relA, DAY, 7);
+      await insertRating(USER_B, relB, DAY, 2);
+    });
+
+    async function scoreOfA(): Promise<number | undefined> {
+      await asSuperuser();
+      const [row] = await rows<{ score: number }>(
+        "select score from ratings where user_id = $1 and category_id = $2 and day = $3",
+        [USER_A, relA, DAY],
+      );
+      return row?.score;
+    }
+
+    it("select: each user sees only their own ratings", async () => {
+      await asRole("authenticated", USER_A);
+      const seenByA = await rows<{ user_id: string }>("select user_id from ratings");
+      expect(seenByA.length).toBeGreaterThan(0);
+      expect(new Set(seenByA.map((r) => r.user_id))).toEqual(new Set([USER_A]));
+      await asRole("authenticated", USER_B);
+      expect(await rows("select 1 from ratings where user_id = $1", [USER_A])).toHaveLength(0);
+      expect(await rows("select 1 from ratings where user_id = $1", [USER_B])).toHaveLength(1);
+    });
+
+    it("insert: user B cannot insert a rating as user A", async () => {
+      await asRole("authenticated", USER_B);
+      await expect(insertRating(USER_A, relA, "2026-06-02", 5)).rejects.toMatchObject({
+        code: "42501",
+      });
+    });
+
+    it("update: user B cannot change user A's rating, nor hand their own to A", async () => {
+      await asRole("authenticated", USER_B);
+      expect(await affected("update ratings set score = 0 where user_id = $1", [USER_A])).toBe(0);
+      await expect(
+        db.query("update ratings set user_id = $1 where user_id = $2", [USER_A, USER_B]),
+      ).rejects.toMatchObject({ code: "42501" });
+      expect(await scoreOfA()).toBe(7);
+    });
+
+    it("delete: user B cannot delete user A's rating", async () => {
+      await asRole("authenticated", USER_B);
+      expect(await affected("delete from ratings where user_id = $1", [USER_A])).toBe(0);
+      expect(await scoreOfA()).toBe(7);
+    });
+
+    it("user A can insert, update and delete their own rating", async () => {
+      await asRole("authenticated", USER_A);
+      await insertRating(USER_A, relA, "2026-06-03", 6);
+      const where = "where user_id = $1 and category_id = $2 and day = '2026-06-03'";
+      expect(await affected(`update ratings set score = 9 ${where}`, [USER_A, relA])).toBe(1);
+      expect(await affected(`delete from ratings ${where}`, [USER_A, relA])).toBe(1);
+    });
+
+    it("anon cannot read or write ratings", async () => {
+      await asRole("anon", null);
+      await expect(db.query("select 1 from ratings")).rejects.toMatchObject({ code: "42501" });
+      await expect(insertRating(USER_A, relA, "2026-06-04", 5)).rejects.toMatchObject({
+        code: "42501",
+      });
+    });
+  });
+});
+
 describe("user deletion", () => {
-  it("cascades to the user's categories and entries", async () => {
+  it("cascades to the user's categories, entries and ratings", async () => {
     const userC = "cccccccc-0000-4000-8000-000000000003";
     await db.query("insert into auth.users (id) values ($1)", [userC]);
     const health = await mainId(userC, "Health");
@@ -368,9 +506,13 @@ describe("user deletion", () => {
       "insert into entries (user_id, category_id, day, hours) values ($1, $2, '2026-04-01', 1)",
       [userC, sub],
     );
+    await db.query(
+      "insert into ratings (user_id, category_id, day, score) values ($1, $2, '2026-04-01', 6)",
+      [userC, health],
+    );
     await db.query("delete from auth.users where id = $1", [userC]);
     const [{ n }] = await rows<{ n: number }>(
-      "select (select count(*) from categories where user_id = $1) + (select count(*) from entries where user_id = $1) as n",
+      "select (select count(*) from categories where user_id = $1) + (select count(*) from entries where user_id = $1) + (select count(*) from ratings where user_id = $1) as n",
       [userC],
     );
     expect(Number(n)).toBe(0);

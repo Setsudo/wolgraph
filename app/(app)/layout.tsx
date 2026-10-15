@@ -6,7 +6,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <nav aria-label="Main" className="flex gap-4 p-4">
-        <Link href="/">Day</Link>
+        <Link href="/rate">Wheel</Link>
+        <Link href="/day">Day</Link>
         <Link href="/trends">Trends</Link>
         <Link href="/categories">Categories</Link>
         <SignOutButton className="ml-auto" />

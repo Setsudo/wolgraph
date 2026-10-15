@@ -13,7 +13,7 @@ export function TrendsBody({ aggregate }: { aggregate: PeriodAggregate }) {
     return (
       <div className="py-16 text-center text-navy/70">
         <p>No hours logged this {aggregate.period.kind}.</p>
-        <Link href="/" className="mt-2 inline-block text-teal underline underline-offset-4">
+        <Link href="/day" className="mt-2 inline-block text-teal underline underline-offset-4">
           Log today
         </Link>
       </div>

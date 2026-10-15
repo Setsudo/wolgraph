@@ -63,7 +63,7 @@ describe("TrendsBody", () => {
   it("shows the empty state for an empty period", () => {
     render(<TrendsBody aggregate={aggregate(MAINS, 0)} />);
     expect(screen.getByText("No hours logged this week.")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Log today" }).getAttribute("href")).toBe("/");
+    expect(screen.getByRole("link", { name: "Log today" }).getAttribute("href")).toBe("/day");
     expect(screen.queryByRole("table")).toBeNull();
   });
 });
