@@ -15,9 +15,14 @@
 - `app/page.tsx` — redirects to `/day/<today>`
 - `app/(auth)/login/page.tsx` — sign-in (placeholder)
 - `app/(app)/layout.tsx` — signed-in shell with main nav
-- `app/(app)/day/[date]/page.tsx`, `app/(app)/trends/page.tsx`, `app/(app)/categories/page.tsx` — app screens (placeholders)
-- `lib/date.ts` — local-date helpers (`todayLocal`)
+- `app/(app)/day/[date]/page.tsx` — daily entry screen (validates the date, loads the day, renders `DayView`)
+- `app/(app)/day/[date]/actions.ts` — `saveEntry` Server Action (upsert, or delete at 0 h)
+- `app/(app)/trends/page.tsx`, `app/(app)/categories/page.tsx` — app screens (placeholders)
+- `lib/date.ts` — local-date helpers (`todayLocal`, `isValidDay`, `addDays`, `formatDayLabel`)
+- `lib/hours.ts` — hour validation, stepper clamping and formatting
 - `lib/wheel/geometry.ts` — pure two-ring wheel layout, SVG paths, hit testing, fill opacity
+- `lib/wheel/model.ts` — day-wheel view model (titles, aria-labels, fill hours), day total, arrow-key navigation
+- `lib/data/day.ts` — `getDay(date)` (active categories + the day's entries) and day-screen types
 - `supabase/migrations/` — SQL migrations (schema, RLS, seed); add new files, never edit applied ones
 - `supabase/test/auth_stub.sql` — stub `auth` schema and roles so migrations run in PGlite tests
 - `lib/data/types.ts` — `Database` and row types matching the migrations
@@ -32,3 +37,8 @@
 - `app/(auth)/login/LoginForm.tsx` — client login form (states: default, sending, sent, error)
 - `components/SignOutButton.tsx` — nav sign-out
 - `e2e/smoke.spec.ts` — credential-free smoke tests
+- `components/DayView.tsx` — day screen client: header navigation, optimistic debounced saves, rollback toast
+- `components/Wheel.tsx` — SVG day wheel, single tab stop with arrow-key navigation
+- `components/HourSheet.tsx` — hours stepper: bottom sheet on phones, side panel from 768px
+- `components/useLocalToday.ts` — browser-local today (null during SSR)
+- `app/dev/day-preview/` — dev-only day screen preview with fixtures and a fake save (`?fail=1`); 404 in production
