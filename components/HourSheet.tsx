@@ -92,7 +92,7 @@ export function HourSheet({
           </div>
 
           <p className="mt-4 text-[12px] text-navy/60">Quick add</p>
-          <div className="mt-1 flex flex-wrap gap-2">
+          <div className="mt-1 flex flex-wrap gap-2 md:gap-1.5">
             {QUICK_ADD.map((chip) => (
               <button
                 key={chip}
@@ -100,7 +100,7 @@ export function HourSheet({
                 aria-label={`Add ${chip} hours`}
                 disabled={readOnly}
                 onClick={() => onChange(addHours(hours, chip))}
-                className="h-9 rounded-full bg-teal/15 px-3 text-teal disabled:opacity-40"
+                className="h-9 rounded-full bg-teal/15 px-3 text-teal md:px-2.5 disabled:opacity-40"
               >
                 +{chip}
               </button>
