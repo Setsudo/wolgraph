@@ -163,7 +163,7 @@ export function RateView({ day, mains, scores, previous, available, save }: Rate
         <p className="mt-2 text-center text-[14px] text-amber">{UNAVAILABLE_NOTICE}</p>
       )}
 
-      <div className="mt-4 md:grid md:grid-cols-[1fr_2fr_1fr] md:items-center md:gap-10">
+      <div className="mt-4 md:grid md:grid-cols-[1fr_2fr_1fr] md:items-center md:gap-10 lg:grid-cols-[1fr_2.5fr_1fr] lg:gap-8">
         <div data-testid="rate-left" className={side}>
           {spacer}
           <div className="flex flex-1 flex-col justify-between gap-6">{left.map(slider)}</div>
@@ -174,6 +174,7 @@ export function RateView({ day, mains, scores, previous, available, save }: Rate
             labels={mains.map((m) => m.name)}
             values={values}
             max={10}
+            maxWidthClass="max-w-[720px]"
             rings={RINGS}
             ringLabel={(v) => String(v)}
             ariaLabel={"Life ratings: " + mains.map((m, i) => `${m.name} ${values[i]}`).join(", ")}
