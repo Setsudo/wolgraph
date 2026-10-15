@@ -1,8 +1,8 @@
-import type { PeriodAggregate } from "@/lib/data/aggregates";
+import type { TrendAggregate } from "@/lib/data/ratingAggregates";
 import { formatHours } from "@/lib/trends/format";
 
-/** Per-category total and per-day average for the period. */
-export function TotalsTable({ aggregate }: { aggregate: PeriodAggregate }) {
+/** Per-category total, per-day average and average rating for the period. */
+export function TotalsTable({ aggregate }: { aggregate: TrendAggregate }) {
   return (
     <table className="mx-auto w-full max-w-[440px] border-collapse text-sm text-navy">
       <thead>
@@ -15,6 +15,9 @@ export function TotalsTable({ aggregate }: { aggregate: PeriodAggregate }) {
           </th>
           <th scope="col" className="py-2 text-right font-normal">
             Avg / day
+          </th>
+          <th scope="col" className="py-2 text-right font-normal">
+            Avg rating
           </th>
         </tr>
       </thead>
@@ -35,12 +38,19 @@ export function TotalsTable({ aggregate }: { aggregate: PeriodAggregate }) {
             </th>
             <td className="py-2 text-right tabular-nums">{formatHours(m.total)}</td>
             <td className="py-2 text-right tabular-nums">{formatHours(m.average)}</td>
+            <td className="py-2 text-right tabular-nums">
+              {m.averageRating === null ? (
+                <span className="text-navy/60">n/a</span>
+              ) : (
+                m.averageRating.toFixed(1)
+              )}
+            </td>
           </tr>
         ))}
       </tbody>
       <tfoot>
         <tr className="border-t border-navy/10">
-          <td colSpan={3} className="pt-2 text-xs text-navy/60">
+          <td colSpan={4} className="pt-2 text-xs text-navy/60">
             Days logged: {aggregate.daysWithEntries} of {aggregate.period.days}
           </td>
         </tr>

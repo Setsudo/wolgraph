@@ -1,4 +1,4 @@
-import type { PeriodAggregate } from "@/lib/data/aggregates";
+import type { TrendAggregate } from "@/lib/data/ratingAggregates";
 import { PeriodControls } from "./PeriodControls";
 import { TrendsBody } from "./TrendsBody";
 
@@ -8,7 +8,7 @@ export function TrendsView({
   anchor,
   basePath,
 }: {
-  aggregate: PeriodAggregate;
+  aggregate: TrendAggregate;
   anchor: string;
   basePath: string;
 }) {

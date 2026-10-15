@@ -1,11 +1,12 @@
 /**
  * Dev-only fixture data for the trends preview: the 8 seeded mains (SPEC §7),
  * a few subcategories, one archived main with hours, and a week of entries
- * for the Monday–Sunday week containing the anchor.
+ * and 0-10 ratings for the Monday–Sunday week containing the anchor (some days
+ * unrated; Spirituality never rated, so it shows as n/a).
  */
 
 import { eachDay, periodFor } from "@/lib/data/period";
-import type { CategoryRow, EntryRow } from "@/lib/data/types";
+import type { CategoryRow, EntryRow, RatingRow } from "@/lib/data/types";
 
 const USER = "preview-user";
 const CREATED = "2026-01-01T00:00:00Z";
@@ -64,6 +65,18 @@ const WEEK: Record<string, number[]> = {
   hobbies: [0, 0.5, 0, 1, 0, 1.5, 0],
 };
 
+/** Score per main category id for each weekday, Monday first; null = unrated. */
+const RATINGS: Record<string, (number | null)[]> = {
+  health: [7, 6, null, 7, 8, 8, null],
+  growth: [5, 6, 6, null, 5, 7, 7],
+  finance: [4, null, null, 5, null, 6, null],
+  family: [8, 7, 8, 8, null, 9, 9],
+  career: [6, 5, 7, 6, 4, null, null],
+  relax: [5, 6, null, 6, 7, 8, 8],
+  relations: [7, null, 6, 7, 8, 8, null],
+  hobbies: [null, 6, null, 7, null, 8, null],
+};
+
 export type PreviewVariant = "full" | "empty" | "few";
 
 export function previewCategories(variant: PreviewVariant): CategoryRow[] {
@@ -85,6 +98,22 @@ export function previewEntries(variant: PreviewVariant, anchor: string): EntryRo
             ? [{ user_id: USER, category_id, day, hours: hours[i], updated_at: CREATED }]
             : [],
         )
+      : [],
+  );
+}
+
+export function previewRatings(variant: PreviewVariant, anchor: string): RatingRow[] {
+  if (variant === "empty") return [];
+  const ids = new Set(previewCategories(variant).map((c) => c.id));
+  const days = eachDay(periodFor("week", anchor));
+  return Object.entries(RATINGS).flatMap(([category_id, scores]) =>
+    ids.has(category_id)
+      ? days.flatMap((day, i) => {
+          const score = scores[i];
+          return score === null
+            ? []
+            : [{ user_id: USER, category_id, day, score, updated_at: CREATED }];
+        })
       : [],
   );
 }
