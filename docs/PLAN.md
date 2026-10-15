@@ -18,7 +18,7 @@ Verify: unit tests for 1, 3, 8 and 12 mains; mains with 0 and 5 subs; angles sum
 `lib/radar/geometry.ts` (axis angles, polygon points, ring paths) and `lib/data/aggregates.ts`: totals and per-day averages per active main category for a week (Mon–Sun) or calendar month, rolling subcategory hours into their main, excluding days with no entries from the divisor.
 Verify: fixture-based unit tests including archived categories, empty period, a main with only sub entries, month length 28/31.
 
-## 5. [ ] Auth (Medium; after 2)
+## 5. [x] Auth (Medium; after 2)
 Supabase server/browser clients in `lib/supabase`, middleware session refresh, `(auth)/login` magic-link form with sent/error states, sign-out, `(app)` routes redirect to login without a session, `/` redirects to `/day/<today>`.
 Verify: unit test for redirect logic; e2e against the dev Supabase project once credentials exist (SPEC §8), otherwise reported as blocked on credentials.
 

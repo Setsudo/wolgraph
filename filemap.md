@@ -25,3 +25,10 @@
 - `lib/data/period.ts` — week/month period math on YYYY-MM-DD strings (UTC-safe)
 - `lib/data/aggregates.ts` — per-period totals and per-day averages per main category
 - `lib/radar/geometry.ts` — pure radar chart geometry (axes, scale, polygons, labels)
+- `proxy.ts` — Next 16 proxy (middleware): session refresh and route protection
+- `lib/supabase/` — `env.ts`, server/browser clients, `proxy.ts` session refresh
+- `lib/auth/routing.ts` — pure redirect rules and `next` sanitizer
+- `app/auth/callback/route.ts` — magic-link code exchange
+- `app/(auth)/login/LoginForm.tsx` — client login form (states: default, sending, sent, error)
+- `components/SignOutButton.tsx` — nav sign-out
+- `e2e/smoke.spec.ts` — credential-free smoke tests

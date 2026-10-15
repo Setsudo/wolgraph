@@ -1,17 +1,16 @@
-import { Suspense } from "react";
-import { redirect } from "next/navigation";
-import { connection } from "next/server";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { todayLocal } from "@/lib/date";
 
-async function RedirectToToday(): Promise<never> {
-  await connection();
-  redirect(`/day/${todayLocal()}`);
-}
-
+/** Sends / to today's day page, using the browser's local date (servers run in UTC). */
 export default function Home() {
-  return (
-    <Suspense>
-      <RedirectToToday />
-    </Suspense>
-  );
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace(`/day/${todayLocal()}`);
+  }, [router]);
+
+  return <p className="p-4 text-navy">Loading…</p>;
 }
