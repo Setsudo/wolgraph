@@ -49,3 +49,12 @@ export function formatDayLabel(day: string): string {
     timeZone: "UTC",
   });
 }
+
+/**
+ * The latest calendar day any time zone can be on at `now`: UTC today + 1
+ * (the furthest-ahead zone, UTC+14, is never more than one day ahead of UTC).
+ * The server cannot know the browser's zone, so it rejects only days after this.
+ */
+export function latestDayAnywhere(now: Date = new Date()): string {
+  return addDays(now.toISOString().slice(0, 10), 1);
+}

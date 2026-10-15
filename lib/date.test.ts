@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { addDays, formatDayLabel, isValidDay, toLocalDateString, todayLocal } from "./date";
+import {
+  addDays,
+  formatDayLabel,
+  isValidDay,
+  latestDayAnywhere,
+  toLocalDateString,
+  todayLocal,
+} from "./date";
 
 describe("toLocalDateString", () => {
   it("zero-pads month and day", () => {
@@ -56,5 +63,13 @@ describe("formatDayLabel", () => {
   it("formats weekday, month and day", () => {
     expect(formatDayLabel("2026-10-14")).toBe("Wed, Oct 14");
     expect(formatDayLabel("2026-10-13")).toBe("Tue, Oct 13");
+  });
+});
+
+describe("latestDayAnywhere", () => {
+  it("is UTC today + 1 at any time of the UTC day", () => {
+    expect(latestDayAnywhere(new Date("2026-10-15T00:00:00Z"))).toBe("2026-10-16");
+    expect(latestDayAnywhere(new Date("2026-10-15T23:59:59Z"))).toBe("2026-10-16");
+    expect(latestDayAnywhere(new Date("2026-12-31T12:00:00Z"))).toBe("2027-01-01");
   });
 });

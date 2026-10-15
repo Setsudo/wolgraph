@@ -112,3 +112,65 @@ describe("DayView", () => {
     expect(sheet.className).toContain("invisible translate-y-full");
   });
 });
+
+describe("DayView with fresh server data", () => {
+  it("adopts new entries for settled categories and keeps unsettled edits", async () => {
+    const save = vi.fn<SaveEntry>().mockResolvedValue({ ok: true });
+    const date = todayLocal();
+    const props = { date, categories: PREVIEW_CATEGORIES, save };
+    const { rerender } = render(<DayView {...props} entries={PREVIEW_ENTRIES} />);
+    fireEvent.click(deepWork());
+    fireEvent.click(plus()); // Deep work 4 -> 4.25, still debouncing
+    // Server re-render (e.g. after another category's save or another device): Deep work
+    // still 4 there, Meetings changed to 3, Sleep removed.
+    rerender(
+      <DayView
+        {...props}
+        entries={[
+          { categoryId: "deep-work", hours: 4 },
+          { categoryId: "meetings", hours: 3 },
+          { categoryId: "exercise", hours: 1 },
+        ]}
+      />,
+    );
+    expect(deepWork().getAttribute("aria-label")).toBe("Career, Deep work, 4.25 hours");
+    expect(
+      screen.getByRole("button", { name: /^Career, Meetings, / }).getAttribute("aria-label"),
+    ).toBe("Career, Meetings, 3 hours");
+    expect(
+      screen.getByRole("button", { name: /^Health, Sleep, / }).getAttribute("aria-label"),
+    ).toBe("Health, Sleep, 0 hours");
+    await act(async () => vi.advanceTimersByTime(400));
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenCalledWith(date, "deep-work", 4.25);
+    expect(deepWork().getAttribute("aria-label")).toBe("Career, Deep work, 4.25 hours");
+  });
+
+  it("does not flush debounced saves when only the save prop identity changes", async () => {
+    const save = vi.fn<SaveEntry>().mockResolvedValue({ ok: true });
+    const props = { date: todayLocal(), categories: PREVIEW_CATEGORIES, entries: PREVIEW_ENTRIES };
+    const { rerender } = render(<DayView {...props} save={save} />);
+    fireEvent.click(deepWork());
+    fireEvent.click(plus());
+    const save2 = vi.fn<SaveEntry>().mockResolvedValue({ ok: true });
+    rerender(<DayView {...props} save={save2} />);
+    expect(save).not.toHaveBeenCalled();
+    await act(async () => vi.advanceTimersByTime(400));
+    expect(save2).toHaveBeenCalledTimes(1);
+  });
+
+  it("puts the toast above the open sheet, and fixed at the bottom when closed", async () => {
+    renderDay(vi.fn<SaveEntry>().mockRejectedValue(new Error("x")));
+    fireEvent.click(deepWork());
+    fireEvent.click(plus());
+    await act(async () => vi.advanceTimersByTime(400));
+    const sheet = screen.getByRole("region", { name: "Hours" });
+    let toast = screen.getByRole("alert");
+    expect(sheet.contains(toast)).toBe(true);
+    expect(toast.className).toContain("bottom-[calc(100%+12px)]");
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    toast = screen.getByRole("alert");
+    expect(sheet.contains(toast)).toBe(false);
+    expect(toast.className).toContain("fixed bottom-6");
+  });
+});

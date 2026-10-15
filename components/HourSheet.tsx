@@ -1,6 +1,6 @@
 "use client";
 
-import type { Ref } from "react";
+import type { ReactNode, Ref } from "react";
 import { addHours, formatHoursFixed, HOURS_STEP, QUICK_ADD } from "@/lib/hours";
 
 export type SaveStatus = "saving" | "saved" | null;
@@ -17,6 +17,8 @@ type HourSheetProps = {
   status: SaveStatus;
   onChange: (hours: number) => void;
   onClose: () => void;
+  /** Positioned against the sheet, e.g. a toast that must sit above it. */
+  overlay?: ReactNode;
   ref?: Ref<HTMLElement>;
 };
 
@@ -35,6 +37,7 @@ export function HourSheet({
   status,
   onChange,
   onClose,
+  overlay,
   ref,
 }: HourSheetProps) {
   const shown = open && title !== null;
@@ -42,7 +45,7 @@ export function HourSheet({
     <section
       ref={ref}
       aria-label="Hours"
-      className={`fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[520px] rounded-t-2xl bg-cream p-5 shadow-[0_-4px_24px_color-mix(in_srgb,var(--color-navy)_15%,transparent)] transition-[translate,visibility] duration-150 md:visible md:static md:z-auto md:mx-0 md:w-[320px] md:shrink-0 md:translate-y-0 md:rounded-2xl md:shadow-none md:transition-none ${
+      className={`fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[520px] rounded-t-2xl bg-cream p-5 shadow-[0_-4px_24px_color-mix(in_srgb,var(--color-navy)_15%,transparent)] transition-[translate,visibility] duration-150 md:visible md:static md:z-auto md:mx-0 md:w-[320px] md:shrink-0 md:translate-none md:rounded-2xl md:shadow-none md:transition-none ${
         shown ? "visible translate-y-0" : "invisible translate-y-full"
       }`}
     >
@@ -120,6 +123,7 @@ export function HourSheet({
           )}
         </div>
       )}
+      {overlay}
     </section>
   );
 }

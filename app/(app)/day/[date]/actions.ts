@@ -1,7 +1,8 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import type { SaveResult } from "@/lib/data/day";
-import { isValidDay } from "@/lib/date";
+import { isValidDay, latestDayAnywhere } from "@/lib/date";
 import { isValidHours } from "@/lib/hours";
 import { createClient } from "@/lib/supabase/server";
 
@@ -10,8 +11,8 @@ const FAILED: SaveResult = { ok: false, message: "Couldn't save." };
 
 /**
  * Sets the signed-in user's hours for one category on one day: 0 deletes the
- * entry, anything else upserts it. Does not revalidate; the client owns the
- * optimistic state.
+ * entry, anything else upserts it. Days after the latest date any time zone
+ * can be on are rejected.
  */
 export async function saveEntry(
   day: string,
@@ -19,6 +20,9 @@ export async function saveEntry(
   hours: number,
 ): Promise<SaveResult> {
   if (!isValidDay(day)) return { ok: false, message: "Invalid date." };
+  if (day > latestDayAnywhere(new Date())) {
+    return { ok: false, message: "Future days can't be edited." };
+  }
   if (typeof categoryId !== "string" || !UUID.test(categoryId)) {
     return { ok: false, message: "Invalid category." };
   }
@@ -44,7 +48,12 @@ export async function saveEntry(
               { user_id: userId, category_id: categoryId, day, hours },
               { onConflict: "user_id,category_id,day" },
             );
-    return error ? FAILED : { ok: true };
+    if (error) return FAILED;
+    // Drop cached copies of this day (client router cache included) so a later visit,
+    // back/forward too, reads fresh entries. The current route re-renders in this
+    // response; DayView merges it without touching categories with unsettled edits.
+    revalidatePath(`/day/${day}`);
+    return { ok: true };
   } catch {
     return FAILED;
   }

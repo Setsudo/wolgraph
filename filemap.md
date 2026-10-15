@@ -16,7 +16,7 @@
 - `app/(auth)/login/page.tsx` — sign-in (placeholder)
 - `app/(app)/layout.tsx` — signed-in shell with main nav
 - `app/(app)/day/[date]/page.tsx` — daily entry screen (validates the date, loads the day, renders `DayView`)
-- `app/(app)/day/[date]/actions.ts` — `saveEntry` Server Action (upsert, or delete at 0 h)
+- `app/(app)/day/[date]/actions.ts` (+ test) — `saveEntry` Server Action (future-day guard, upsert or delete at 0 h, revalidates the day path)
 - `app/(app)/trends/page.tsx`, `app/(app)/categories/page.tsx` — app screens (placeholders)
 - `lib/date.ts` — local-date helpers (`todayLocal`, `isValidDay`, `addDays`, `formatDayLabel`)
 - `lib/hours.ts` — hour validation, stepper clamping and formatting
