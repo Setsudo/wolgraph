@@ -10,7 +10,7 @@ Ranked by the owner. The loop takes the top open item, builds it with tests, ver
 5. [x] Trends: larger radar with less empty space; scale labels no longer collide with category labels.
 
 ## Reference look (owner request 2026-10-15; reference: docs/design/reference-wheel.png)
-6. [~] Shared "life wheel" chart in the reference style (sector wedges, concentric circles, values at sector centres, curved uppercase serif labels outside, teal fill); Trends radar switches to it.
+6. [x] Shared "life wheel" chart in the reference style (sector wedges, concentric circles, values at sector centres, curved uppercase serif labels outside, teal fill); Trends radar switches to it.
 7. [ ] "Rate your life" screen: eight 0-10 sliders around the wheel (left: 5,6,7,0; right: 4,3,2,1 by category order), saved per day. Schema change: new `ratings` table, needs approval.
 
 ## Features (proposed order, awaiting owner confirmation)
