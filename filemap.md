@@ -17,3 +17,4 @@
 - `app/(app)/layout.tsx` — signed-in shell with main nav
 - `app/(app)/day/[date]/page.tsx`, `app/(app)/trends/page.tsx`, `app/(app)/categories/page.tsx` — app screens (placeholders)
 - `lib/date.ts` — local-date helpers (`todayLocal`)
+- `lib/wheel/geometry.ts` — pure two-ring wheel layout, SVG paths, hit testing, fill opacity

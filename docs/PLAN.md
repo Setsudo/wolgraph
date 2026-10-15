@@ -10,7 +10,7 @@ Verify: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build` all pas
 `supabase/migrations/0001_init.sql` implementing SPEC §5 exactly: tables, checks, parent-is-main and one-level constraint (trigger), partial unique index, RLS policies, `seed_default_categories()` called by a trigger on `auth.users` insert. Generate `lib/data/types.ts` by hand to match.
 Verify: Vitest suite runs the migration in PGlite with a stub `auth` schema (`auth.users`, `auth.uid()` reading a session setting) and asserts: seed creates 8 mains; hours check rejects 0.1 and 25; sub-of-sub rejected; RLS isolates two users for all four operations.
 
-## 3. [ ] Wheel geometry (Careful; after 1, parallel with 2)
+## 3. [x] Wheel geometry (Careful; after 1, parallel with 2)
 `lib/wheel/geometry.ts`: given main categories with subcategory counts, return segments `{categoryId, ring, startAngle, endAngle, innerR, outerR, path, labelPoint, labelAngle}` per SPEC §7; `hitTest(x, y)`; opacity from hours. No React.
 Verify: unit tests for 1, 3, 8 and 12 mains; mains with 0 and 5 subs; angles sum to 360; hit tests at sector centres and boundaries; label angles keep text upright.
 
