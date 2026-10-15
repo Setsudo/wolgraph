@@ -37,4 +37,4 @@ Verify: component test with fixture data; screenshots at 390 and 1440 px.
 ## 9. [ ] Deploy and e2e smoke (Light; after 6, 7, 8 and owner's SPEC §8 setup)
 Link Vercel project, set env vars, apply migration to the Supabase project, Playwright smoke in CI against Preview: sign-in via Supabase admin-generated link, log hours, see them on trends. README with setup steps.
 Verify: CI green on the PR; Production URL loads and signs in.
-Status: Vercel project linked (owner's account); PR previews build from `mvp`. Production builds from `master` once this PR merges.
+Status: Vercel project `wolgraph` linked in team michaelcmccune-2467s-projects; PR previews build from `mvp`. Production builds from `master` once this PR merges.
