@@ -5,6 +5,7 @@
 - `docs/SPEC.md` — MVP scope, data model, design decisions; change only with owner approval
 - `docs/PLAN.md` — task list and status; tick tasks as they are accepted
 - `docs/BACKLOG.md` — owner-ranked backlog for the build-and-test loop
+- `docs/design/` — visual references from the owner (reference-wheel.png)
 - `filemap.md` — this index; update when adding or moving files
 - `AGENTS.md` — Next.js-managed agent notes; rewritten by `next dev`, commit as is
 - `package.json`, `package-lock.json` — npm scripts and dependencies
