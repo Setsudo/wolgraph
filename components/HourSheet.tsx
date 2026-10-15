@@ -27,7 +27,7 @@ const STATUS_TEXT: Record<Exclude<SaveStatus, null>, string> = {
   saved: "Saved",
 };
 
-/** Hours stepper for one category: bottom sheet on phones, side panel from 768px. */
+/** Hours stepper for one category: bottom sheet on phones, side card from 768px. */
 export function HourSheet({
   title,
   hours,
@@ -45,12 +45,15 @@ export function HourSheet({
     <section
       ref={ref}
       aria-label="Hours"
-      className={`fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[520px] rounded-t-2xl bg-cream p-5 shadow-[0_-4px_24px_color-mix(in_srgb,var(--color-navy)_15%,transparent)] transition-[translate,visibility] duration-150 md:visible md:static md:z-auto md:mx-0 md:w-[320px] md:shrink-0 md:translate-none md:rounded-2xl md:shadow-none md:transition-none ${
+      className={`fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[520px] rounded-t-2xl bg-cream p-5 shadow-[0_-4px_24px_color-mix(in_srgb,var(--color-navy)_15%,transparent)] transition-[translate,visibility] duration-150 md:visible md:static md:z-auto md:mx-0 md:w-[300px] md:shrink-0 md:translate-none md:rounded-xl md:border md:border-navy/10 md:bg-white/60 md:p-6 md:shadow-none md:transition-none ${
         shown ? "visible translate-y-0" : "invisible translate-y-full"
       }`}
     >
       {title === null ? (
-        <p className="text-navy/60">Select a category on the wheel.</p>
+        // Only reachable from 768px: below that the sheet is hidden while nothing is selected.
+        <p data-testid="hours-placeholder" className="hidden text-[15px] text-navy/60 md:block">
+          Tap a category to log hours.
+        </p>
       ) : (
         <div className="text-navy">
           <div className="flex items-start justify-between gap-2">

@@ -72,9 +72,18 @@ describe("HourSheet", () => {
     expect(screen.getByRole("status").textContent).toBe("Saving…");
   });
 
-  it("asks for a selection when nothing is selected", () => {
+  it("shows the md-only placeholder when nothing is selected", () => {
     renderSheet({ title: null });
-    expect(screen.getByText("Select a category on the wheel.")).toBeTruthy();
+    const placeholder = screen.getByTestId("hours-placeholder");
+    expect(placeholder.textContent).toBe("Tap a category to log hours.");
+    // jsdom ignores media queries: assert it is hidden on phones and shown from md.
+    expect(placeholder.classList).toContain("hidden");
+    expect(placeholder.classList).toContain("md:block");
     expect(screen.queryByRole("button", { name: "Clear" })).toBeNull();
+  });
+
+  it("does not show the placeholder when a category is selected", () => {
+    renderSheet();
+    expect(screen.queryByTestId("hours-placeholder")).toBeNull();
   });
 });
