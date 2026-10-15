@@ -91,12 +91,13 @@ entries (
 
 ## 7. Design decisions
 
-Palette carried from the slider prototype: cream `#F8F1E4` background, navy `#1F2A44` text, teal `#2F8C8C` accent; eight category colors from a validated categorical palette (dataviz skill), each checked for contrast on cream. Serif display (Georgia) for headings, system sans for UI text.
+Palette carried from the slider prototype: cream `#F8F1E4` background, navy `#1F2A44` text, teal `#2F8C8C` accent; seeded category colors: Health #2F8C8C, Personal Growth #5B6CC0, Finance #3E8E4F, Family #C9831F, Career #C8553D, Relaxation #7A5BA8, Relationships #C2557F, Spirituality #4F7C9E. New categories pick from the same eight. Serif display (Georgia) for headings, system sans for UI text.
 
 **Entry wheel** (see mockup in the project thread):
 - Two concentric rings, 12 o'clock start, clockwise, equal-angle sectors for active main categories in `sort_order`. Equal angles, not hour-proportional, so tap targets never shrink.
 - Inner ring: main categories. Outer ring: each main's subcategories split its angle equally; a main with no subs shows a single outer segment that maps to the main itself.
 - Each segment's fill opacity scales with that day's hours (0 h = outline only, 8 h+ = full color); hours shown as text in segments ≥ 0.5 h, category names on the inner ring, curved or tangent text.
+- "Today" is the user's local date, determined in the browser (server time on Vercel is UTC).
 - Center: day total "6.5 h of 24", turns amber over 24.
 - Minimum tap target 44 px; the wheel is keyboard operable (arrow keys move between segments, Enter opens the sheet) and every segment has an aria-label "Health, Exercise, 1.5 hours".
 - Mobile first: the wheel is full width up to 520 px; on desktop it sits left with the sheet as a side panel instead of a bottom sheet.

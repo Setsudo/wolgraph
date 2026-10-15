@@ -2,7 +2,7 @@
 
 Each task names its tier, dependencies and verification. Spec: `docs/SPEC.md`. Status markers: `[ ]` open, `[x]` accepted.
 
-## 1. [ ] Scaffold (Medium; first, nothing parallel)
+## 1. [x] Scaffold (Medium; first, nothing parallel)
 Next.js 16 App Router + TypeScript strict + Tailwind 4 at the repo root, npm. Add Vitest (jsdom for components), Playwright, ESLint (next config), Prettier, `@supabase/supabase-js`, `@supabase/ssr`. Theme tokens from SPEC §7 in `app/globals.css`. Route skeletons from SPEC §4 rendering placeholders. `.env.example` with `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. GitHub Actions workflow: install, lint, typecheck, unit tests. Update `filemap.md`.
 Verify: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build` all pass; dev server renders each route.
 
