@@ -95,8 +95,8 @@ Palette carried from the slider prototype: cream `#F8F1E4` background, navy `#1F
 
 **Entry wheel** (see mockup in the project thread):
 - Two concentric rings, 12 o'clock start, clockwise, equal-angle sectors for active main categories in `sort_order`. Equal angles, not hour-proportional, so tap targets never shrink.
-- Inner ring: main categories. Outer ring: each main's subcategories split its angle equally; a main with no subs shows a single outer segment that maps to the main itself.
-- Each segment's fill opacity scales with that day's hours (0 h = outline only, 8 h+ = full color); hours shown as text in segments ≥ 0.5 h, category names on the inner ring, curved or tangent text.
+- Inner ring: main categories. Outer ring: each main's subcategories split its angle equally. A main with no subs is one segment spanning both rings (owner-approved 2026-10-15; previously a duplicate outer segment).
+- Each segment's fill opacity scales with that day's hours (0 h = outline only, any logged time at least 40%, 8 h+ = full color); hours shown as text in segments with any time, category names follow the arc and shrink to fit.
 - "Today" is the user's local date, determined in the browser (server time on Vercel is UTC).
 - Center: day total "6.5 h of 24", turns amber over 24.
 - Minimum tap target 44 px; the wheel is keyboard operable (arrow keys move between segments, Enter opens the sheet) and every segment has an aria-label "Health, Exercise, 1.5 hours".
