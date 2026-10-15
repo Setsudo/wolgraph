@@ -26,6 +26,7 @@ const parts = (c: HTMLElement, part: string) => [...c.querySelectorAll(`[data-pa
 describe("TrendsBody", () => {
   it("shows the note and table but no wheel with fewer than 3 mains", () => {
     render(<TrendsBody aggregate={aggregate(MAINS.slice(0, 2))} />);
+    expect(FEW_MAINS_NOTE).toBe("Add at least 3 categories to see the wheel.");
     expect(screen.getByText(FEW_MAINS_NOTE)).toBeTruthy();
     expect(screen.queryByRole("img")).toBeNull();
     expect(screen.getByRole("table")).toBeTruthy();

@@ -5,7 +5,7 @@ import { ringSteps, scaleMax } from "@/lib/radar/geometry";
 import { formatNumber } from "@/lib/trends/format";
 import { TotalsTable } from "./TotalsTable";
 
-export const FEW_MAINS_NOTE = "Add at least 3 categories to see the radar.";
+export const FEW_MAINS_NOTE = "Add at least 3 categories to see the wheel.";
 
 /** Wheel of averages and totals for a period, or the empty state. Pure render. */
 export function TrendsBody({ aggregate }: { aggregate: PeriodAggregate }) {
@@ -20,10 +20,10 @@ export function TrendsBody({ aggregate }: { aggregate: PeriodAggregate }) {
     );
   }
 
-  const showRadar = aggregate.mains.length >= 3;
+  const showWheel = aggregate.mains.length >= 3;
   return (
     <div className="flex flex-col gap-6">
-      {showRadar ? (
+      {showWheel ? (
         <AverageWheel mains={aggregate.mains} />
       ) : (
         <p className="mx-auto w-full max-w-[440px] text-[13px] text-navy/60">{FEW_MAINS_NOTE}</p>

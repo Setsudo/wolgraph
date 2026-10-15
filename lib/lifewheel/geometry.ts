@@ -9,6 +9,7 @@
  */
 
 import { arcPath, polarToXY } from "@/lib/wheel/geometry";
+import { fitLabel } from "@/lib/wheel/model";
 
 export const LIFEWHEEL_SIZE = 600;
 export const LIFEWHEEL_RADIUS = 230;
@@ -16,6 +17,16 @@ export const LIFEWHEEL_RADIUS = 230;
 export const LABEL_OFFSET = 16;
 /** Angular inset of each label arc from its sector's boundaries, per side. */
 export const LABEL_INSET_DEG = 3;
+
+/** Category label font sizes, in viewBox units. */
+export const LABEL_BASE_SIZE = 19;
+export const LABEL_MIN_SIZE = 10;
+/**
+ * fitLabel assumes mixed-case glyphs (0.56 em); uppercase serif with 0.06em
+ * tracking runs about 0.76 em per character, and text past the end of a
+ * textPath is not drawn, so labels fit against a proportionally shorter length.
+ */
+export const CAPS_FIT = 0.73;
 
 type Point = { x: number; y: number };
 
@@ -84,4 +95,26 @@ export function labelArcs(n: number, radius: number, size: number = LIFEWHEEL_SI
       available: Math.max(0, (r * (end - start) * Math.PI) / 180),
     };
   });
+}
+
+/**
+ * Fits uppercase labels to their arcs at one shared size: the smallest size
+ * any non-italic label needs (LABEL_BASE_SIZE when there is none). A label
+ * that still does not fit at the shared size (e.g. an italic archived one)
+ * shrinks on its own, down to LABEL_MIN_SIZE, then truncates.
+ */
+export function fitLabels(
+  texts: string[],
+  available: number[],
+  italic: boolean[] = [],
+): { text: string; fontSize: number }[] {
+  const room = texts.map((_, i) => (available[i] ?? 0) * CAPS_FIT);
+  const shared = texts.reduce(
+    (size, t, i) =>
+      italic[i]
+        ? size
+        : Math.min(size, fitLabel(t, room[i], LABEL_BASE_SIZE, LABEL_MIN_SIZE).fontSize),
+    LABEL_BASE_SIZE,
+  );
+  return texts.map((t, i) => fitLabel(t, room[i], shared, LABEL_MIN_SIZE));
 }

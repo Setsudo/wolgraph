@@ -5,7 +5,11 @@ import {
   LABEL_OFFSET,
   LIFEWHEEL_RADIUS as R,
   LIFEWHEEL_SIZE as SIZE,
+  CAPS_FIT,
+  LABEL_BASE_SIZE,
+  LABEL_MIN_SIZE,
   clampValue,
+  fitLabels,
   labelArcs,
   points,
   ringRadii,
@@ -125,5 +129,60 @@ describe("labelArcs", () => {
 
   it("n <= 0 gives nothing", () => {
     expect(labelArcs(0, R)).toEqual([]);
+  });
+});
+
+describe("fitLabels", () => {
+  const arc8 = labelArcs(8, R)[0].available; // about 167 units
+  const sizeFor = (text: string, available: number) =>
+    (available * CAPS_FIT) / (text.length * 0.56);
+
+  it("uses base 19 and min 10", () => {
+    expect(LABEL_BASE_SIZE).toBe(19);
+    expect(LABEL_MIN_SIZE).toBe(10);
+  });
+
+  it("short labels all get the base size", () => {
+    const fits = fitLabels(["HEALTH", "FAMILY", "CAREER"], [arc8, arc8, arc8]);
+    expect(fits.map((f) => f.fontSize)).toEqual([19, 19, 19]);
+  });
+
+  it("all labels share the smallest non-italic fitted size", () => {
+    const fits = fitLabels(["HEALTH", "PERSONAL GROWTH", "SPIRITUALITY"], [arc8, arc8, arc8]);
+    const shared = sizeFor("PERSONAL GROWTH", arc8);
+    expect(shared).toBeLessThan(19);
+    fits.forEach((f) => expect(f.fontSize).toBeCloseTo(shared, 9));
+    expect(fits.map((f) => f.text)).toEqual(["HEALTH", "PERSONAL GROWTH", "SPIRITUALITY"]);
+  });
+
+  it("italic labels do not set the shared size but shrink on their own", () => {
+    const fits = fitLabels(
+      ["HEALTH", "FAMILY", "HOBBIES (ARCHIVED)"],
+      [arc8, arc8, arc8],
+      [false, false, true],
+    );
+    expect(fits[0].fontSize).toBe(19);
+    expect(fits[1].fontSize).toBe(19);
+    expect(fits[2].fontSize).toBeCloseTo(sizeFor("HOBBIES (ARCHIVED)", arc8), 9);
+    expect(fits[2].text).toBe("HOBBIES (ARCHIVED)");
+  });
+
+  it("a short italic label never exceeds the shared size", () => {
+    const fits = fitLabels(["PERSONAL GROWTH", "OLD"], [arc8, arc8], [false, true]);
+    expect(fits[1].fontSize).toBeCloseTo(fits[0].fontSize, 9);
+  });
+
+  it("with no non-italic labels, each fits from the base size", () => {
+    const fits = fitLabels(["OLD", "HOBBIES (ARCHIVED)"], [arc8, arc8], [true, true]);
+    expect(fits[0].fontSize).toBe(19);
+    expect(fits[1].fontSize).toBeLessThan(19);
+  });
+
+  it("a non-italic label truncated at the minimum pulls everyone to the minimum", () => {
+    const arc12 = labelArcs(12, R)[0].available; // about 103 units
+    const fits = fitLabels(["RELATIONSHIPS AND COMMUNITY LIFE", "B"], [arc12, arc12]);
+    expect(fits.map((f) => f.fontSize)).toEqual([10, 10]);
+    expect(fits[0].text).toMatch(/^RELATIONSHIP.*…$/);
+    expect(fits[1].text).toBe("B");
   });
 });

@@ -66,11 +66,21 @@ describe("LifeWheel", () => {
     expect(all(c, "ring-label").map((t) => t.textContent)).toEqual(["1h", "2h", "3h"]);
   });
 
-  it("draws the data below the grid", () => {
+  it("draws the fill below the grid and the outline and dots above it", () => {
     const c = wheel();
     const order = [...c.querySelectorAll("[data-part]")].map((e) => e.getAttribute("data-part"));
+    expect(all(c, "data")[0].getAttribute("class")).toContain("fill-teal");
+    expect(all(c, "data-outline")).toHaveLength(1);
+    expect(all(c, "data-outline")[0].getAttribute("d")).toBe(all(c, "data")[0].getAttribute("d"));
     expect(order.indexOf("data")).toBeLessThan(order.indexOf("ring"));
-    expect(order.lastIndexOf("dot")).toBeLessThan(order.indexOf("spoke"));
+    expect(order.indexOf("data-outline")).toBeGreaterThan(order.lastIndexOf("spoke"));
+    expect(order.indexOf("data-outline")).toBeGreaterThan(order.indexOf("boundary"));
+    expect(order.indexOf("dot")).toBeGreaterThan(order.indexOf("data-outline"));
+  });
+
+  it("sets ring labels in the display serif", () => {
+    const c = wheel();
+    expect(all(c, "ring-label")[0].parentElement?.getAttribute("class")).toContain("font-display");
   });
 
   it("puts each label on its own arc via textPath, uppercased", () => {
@@ -88,21 +98,23 @@ describe("LifeWheel", () => {
       expect(tp!.getAttribute("startOffset")).toBe("50%");
     });
     expect(ids.size).toBe(8);
-    expect(labels[0].getAttribute("font-size")).toBe("17");
+    // One shared size for all, set by the longest label.
+    const sizes = new Set(labels.map((l) => l.getAttribute("font-size")));
+    expect(sizes.size).toBe(1);
   });
 
-  it("shrinks long labels to fit their sector, truncating below the minimum", () => {
-    // n = 12: 24° of arc at r = 246 is about 103 units.
-    const labels = ["Spirituality", "Relationships and community life", ...Array(10).fill("B")];
-    const c = wheel({ labels, values: Array(12).fill(1) });
-    const [shrunk, cut, short] = all(c, "label");
+  it("shrinks an italic label on its own below the shared size", () => {
+    const c = wheel({
+      labels: ["Health", "Family", "A rather long archived name", "D", "E", "F", "G", "H"],
+      values: [1, 2, 3, 4, 5, 6, 7, 8],
+      italic: [false, false, true],
+    });
+    const [a, b, archived] = all(c, "label");
     const size = (l: Element) => Number(l.getAttribute("font-size"));
-    expect(size(shrunk)).toBeLessThan(17);
-    expect(size(shrunk)).toBeGreaterThan(10);
-    expect(shrunk.textContent).toBe("SPIRITUALITY");
-    expect(size(cut)).toBe(10);
-    expect(cut.textContent).toMatch(/^RELATIONSHIP.*…$/);
-    expect(size(short)).toBe(17);
+    expect(size(a)).toBe(19);
+    expect(size(b)).toBe(19);
+    expect(size(archived)).toBeLessThan(19);
+    expect(size(archived)).toBeGreaterThanOrEqual(10);
   });
 
   it("leaves room for wide uppercase glyphs", () => {
@@ -110,7 +122,7 @@ describe("LifeWheel", () => {
     const c = wheel();
     const growth = all(c, "label")[1];
     const size = Number(growth.getAttribute("font-size"));
-    expect(size).toBeLessThan(17);
+    expect(size).toBeLessThan(19);
     expect(15 * 0.76 * size).toBeLessThanOrEqual(167);
   });
 

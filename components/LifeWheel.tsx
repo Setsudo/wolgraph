@@ -2,6 +2,7 @@ import { useId } from "react";
 import {
   LIFEWHEEL_RADIUS as R,
   LIFEWHEEL_SIZE as SIZE,
+  fitLabels,
   labelArcs,
   points,
   ringRadii,
@@ -9,18 +10,8 @@ import {
 } from "@/lib/lifewheel/geometry";
 import { polygonPath } from "@/lib/radar/geometry";
 import { polarToXY } from "@/lib/wheel/geometry";
-import { fitLabel } from "@/lib/wheel/model";
 
 const C = SIZE / 2;
-const LABEL_BASE_SIZE = 17;
-const LABEL_MIN_SIZE = 10;
-/**
- * fitLabel assumes mixed-case glyphs (0.56 em); uppercase serif with 0.06em
- * tracking runs about 0.76 em per character, and text past the end of a
- * textPath is not drawn, so fit against a proportionally shorter length.
- */
-const CAPS_FIT = 0.73;
-
 export type LifeWheelProps = {
   labels: string[];
   values: number[];
@@ -59,6 +50,12 @@ export function LifeWheel({
   const ringValues = rings.filter((v) => v > 0);
   const radii = ringRadii(ringValues, max, R);
   const arcs = labelArcs(n, R);
+  const fitted = fitLabels(
+    labels.map((l) => l.toUpperCase()),
+    arcs.map((a) => a.available),
+    italic,
+  );
+  const path = polygonPath(data);
 
   return (
     <svg
@@ -72,19 +69,8 @@ export function LifeWheel({
           <path key={i} id={arcId(i)} d={a.d} fill="none" />
         ))}
       </defs>
-      <g data-part="data-layer">
-        <path
-          data-part="data"
-          d={polygonPath(data)}
-          className="fill-teal stroke-teal"
-          fillOpacity={0.4}
-          strokeWidth={2}
-          strokeLinejoin="round"
-        />
-        {data.map((p, i) => (
-          <circle key={i} data-part="dot" cx={p.x} cy={p.y} r={4} className="fill-teal" />
-        ))}
-      </g>
+      {/* Fill under the grid so grid lines stay readable through it. */}
+      <path data-part="data" d={path} className="fill-teal" fillOpacity={0.4} />
       <g className="fill-none stroke-teal">
         {ringValues.map((v, i) =>
           v < max ? (
@@ -107,7 +93,18 @@ export function LifeWheel({
         })}
         <circle data-part="boundary" cx={C} cy={C} r={R} strokeWidth={2.5} />
       </g>
-      <g className="fill-teal" fontSize={11}>
+      {/* Outline and dots above the grid, as in the reference. */}
+      <path
+        data-part="data-outline"
+        d={path}
+        className="fill-none stroke-teal"
+        strokeWidth={2}
+        strokeLinejoin="round"
+      />
+      {data.map((p, i) => (
+        <circle key={i} data-part="dot" cx={p.x} cy={p.y} r={4} className="fill-teal" />
+      ))}
+      <g className="font-display fill-teal" fontSize={11}>
         {ringValues.map((v, i) => (
           <text key={i} data-part="ring-label" x={C + radii[i] - 3} y={C + 12} textAnchor="end">
             {ringLabel(v)}
@@ -115,29 +112,21 @@ export function LifeWheel({
         ))}
       </g>
       <g className="font-display fill-navy">
-        {arcs.map((a, i) => {
-          const fit = fitLabel(
-            labels[i].toUpperCase(),
-            a.available * CAPS_FIT,
-            LABEL_BASE_SIZE,
-            LABEL_MIN_SIZE,
-          );
-          return (
-            <text
-              key={i}
-              data-part="label"
-              fontSize={fit.fontSize}
-              letterSpacing="0.06em"
-              textAnchor="middle"
-              dominantBaseline="central"
-              fontStyle={italic?.[i] ? "italic" : undefined}
-            >
-              <textPath href={`#${arcId(i)}`} startOffset="50%">
-                {fit.text}
-              </textPath>
-            </text>
-          );
-        })}
+        {fitted.map((fit, i) => (
+          <text
+            key={i}
+            data-part="label"
+            fontSize={fit.fontSize}
+            letterSpacing="0.06em"
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontStyle={italic?.[i] ? "italic" : undefined}
+          >
+            <textPath href={`#${arcId(i)}`} startOffset="50%">
+              {fit.text}
+            </textPath>
+          </text>
+        ))}
       </g>
     </svg>
   );
