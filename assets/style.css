@@ -1,0 +1,106 @@
+:root {
+    --cream: #F8F1E4;
+    --teal: #2F8C8C;
+    --navy: #1F2A44;
+
+    /* Dash 3+ component theme */
+    --Dash-Fill-Interactive-Strong: var(--teal);
+    --Dash-Fill-Primary-Hover: #256f6f;
+    --Dash-Fill-Primary-Active: #1d5959;
+}
+
+html,
+body {
+    margin: 0;
+    background: var(--cream);
+    color: var(--navy);
+}
+
+.page {
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding: 0 16px 16px;
+    font-family: Georgia, "Times New Roman", serif;
+}
+
+.title {
+    margin: 0;
+    padding: 18px 0 6px;
+    text-align: center;
+    font-size: 40px;
+    font-weight: normal;
+    letter-spacing: 0.12em;
+    color: var(--navy);
+}
+
+.main-band {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+}
+
+.slider-column,
+.wheel-column {
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+.slider-column {
+    flex: 0 0 25%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    /* Inset so the four controls span roughly the ring, not the label margin */
+    padding: 14vh 24px 16vh;
+}
+
+.wheel-column {
+    flex: 0 0 50%;
+}
+
+.slider-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 18px;
+    letter-spacing: 0.04em;
+    color: var(--navy);
+}
+
+/* Dash 2 (rc-slider) */
+.rc-slider-track {
+    background-color: var(--teal);
+}
+
+.rc-slider-handle,
+.rc-slider-dot-active {
+    border-color: var(--teal);
+}
+
+.rc-slider-handle:hover,
+.rc-slider-handle:active,
+.rc-slider-handle:focus {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 4px rgba(47, 140, 140, 0.25);
+}
+
+@media (max-width: 900px) {
+    .main-band {
+        flex-direction: column;
+    }
+
+    .slider-column,
+    .wheel-column {
+        flex-basis: auto;
+        width: 100%;
+    }
+
+    .slider-column {
+        padding: 12px 8px;
+        gap: 20px;
+    }
+
+    .wheel-graph {
+        height: 100vw !important;
+        max-height: 90vh;
+    }
+}
