@@ -15,7 +15,12 @@
 - `app/page.tsx` — redirects to `/day/<today>`
 - `app/(auth)/login/page.tsx` — sign-in (placeholder)
 - `app/(app)/layout.tsx` — signed-in shell with main nav
-- `app/(app)/day/[date]/page.tsx`, `app/(app)/trends/page.tsx`, `app/(app)/categories/page.tsx` — app screens (placeholders)
+- `app/(app)/day/[date]/page.tsx`, `app/(app)/trends/page.tsx` — app screens (placeholders)
+- `app/(app)/categories/page.tsx` — Categories screen (loads categories, passes Server Actions)
+- `app/(app)/categories/CategoriesScreen.tsx` — client UI: add/rename/archive, Archived section, undo toast
+- `app/(app)/categories/actions.ts` — category Server Actions (revalidate `/categories` and `/day`)
+- `app/(app)/categories/CategoriesScreen.test.tsx` — component tests (validation, palette default, archive/restore)
+- `app/dev/categories-preview/` — dev-only preview of the Categories screen with fixtures and fake actions (404 in production)
 - `lib/date.ts` — local-date helpers (`todayLocal`)
 - `lib/wheel/geometry.ts` — pure two-ring wheel layout, SVG paths, hit testing, fill opacity
 - `supabase/migrations/` — SQL migrations (schema, RLS, seed); add new files, never edit applied ones
@@ -23,6 +28,8 @@
 - `lib/data/types.ts` — `Database` and row types matching the migrations
 - `lib/data/schema.test.ts` — schema, constraint and RLS tests (PGlite)
 - `lib/data/period.ts` — week/month period math on YYYY-MM-DD strings (UTC-safe)
+- `lib/data/categoryRules.ts` — pure category rules: palette, name validation, default color, sort order, action types
+- `lib/data/categories.ts` — server category data access: `listCategories` and mutations (RLS, error mapping)
 - `lib/data/aggregates.ts` — per-period totals and per-day averages per main category
 - `lib/radar/geometry.ts` — pure radar chart geometry (axes, scale, polygons, labels)
 - `lib/data/trends.ts` — `getTrendData(period)`: server-side load of categories and period entries, aggregated
