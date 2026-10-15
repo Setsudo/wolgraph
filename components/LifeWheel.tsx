@@ -23,6 +23,8 @@ export type LifeWheelProps = {
   italic?: boolean[];
   /** Width cap class; defaults to max-w-[560px]. */
   maxWidthClass?: string;
+  /** Category colour per label (hex from the data); fills that label's value dot. */
+  colors?: string[];
 };
 
 /**
@@ -38,6 +40,7 @@ export function LifeWheel({
   ariaLabel,
   italic,
   maxWidthClass = "max-w-[560px]",
+  colors,
 }: LifeWheelProps) {
   const idPrefix = useId();
   // Referenced by URL fragment from <textPath href>, so keep it to safe characters.
@@ -105,9 +108,23 @@ export function LifeWheel({
         strokeWidth={2}
         strokeLinejoin="round"
       />
-      {data.map((p, i) => (
-        <circle key={i} data-part="dot" cx={p.x} cy={p.y} r={4} className="fill-teal" />
-      ))}
+      {data.map((p, i) => {
+        const color = colors?.[i];
+        return color ? (
+          <circle
+            key={i}
+            data-part="dot"
+            cx={p.x}
+            cy={p.y}
+            r={5}
+            fill={color}
+            className="stroke-cream"
+            strokeWidth={1.5}
+          />
+        ) : (
+          <circle key={i} data-part="dot" cx={p.x} cy={p.y} r={4} className="fill-teal" />
+        );
+      })}
       <g className="font-display fill-teal" fontSize={11}>
         {ringValues.map((v, i) => (
           <text key={i} data-part="ring-label" x={C + radii[i] - 3} y={C + 12} textAnchor="end">

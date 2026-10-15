@@ -2,21 +2,26 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { PREVIEW_MAINS, PREVIEW_PREVIOUS, PREVIEW_SCORES } from "@/app/dev/rate-preview/fixtures";
 import type { SaveRating } from "@/lib/data/ratings";
+import { addDays, todayLocal } from "@/lib/date";
 import { SAVE_FAILED_MESSAGE } from "./DayView";
 import { RateView, UNAVAILABLE_NOTICE } from "./RateView";
 
 const DAY = "2026-10-15";
 
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+
 beforeEach(() => vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] }));
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  push.mockReset();
 });
 
-function renderRate(save: SaveRating, available = true) {
+function renderRate(save: SaveRating, available = true, day = DAY) {
   return render(
     <RateView
-      day={DAY}
+      day={day}
       mains={PREVIEW_MAINS}
       scores={PREVIEW_SCORES}
       previous={PREVIEW_PREVIOUS}
@@ -45,6 +50,60 @@ describe("RateView", () => {
     );
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Wheel of Life");
     expect(screen.getByText("Thu, Oct 15")).toBeTruthy();
+  });
+
+  it("colours the wheel's dots and the sliders by category", () => {
+    const { container } = renderRate(vi.fn<SaveRating>());
+    const dots = [...container.querySelectorAll('[data-part="dot"]')];
+    expect(dots.map((d) => d.getAttribute("fill"))).toEqual(PREVIEW_MAINS.map((m) => m.color));
+    const input = slider("Career") as HTMLInputElement;
+    expect(input.style.getPropertyValue("--thumb")).toBe("#C8553D");
+  });
+
+  it("has day arrows; next is disabled on today", () => {
+    renderRate(vi.fn<SaveRating>(), true, todayLocal());
+    expect((screen.getByRole("button", { name: "Next day" }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Previous day" }));
+    expect(push).toHaveBeenLastCalledWith(`/rate?day=${addDays(todayLocal(), -1)}`);
+  });
+
+  it("navigates to the previous and next day from a past day", () => {
+    renderRate(vi.fn<SaveRating>(), true, "2020-03-01");
+    fireEvent.click(screen.getByRole("button", { name: "Previous day" }));
+    expect(push).toHaveBeenLastCalledWith("/rate?day=2020-02-29");
+    const next = screen.getByRole("button", { name: "Next day" }) as HTMLButtonElement;
+    expect(next.disabled).toBe(false);
+    fireEvent.click(next);
+    expect(push).toHaveBeenLastCalledWith("/rate?day=2020-03-02");
+  });
+
+  it("uses onNavigate when given", () => {
+    const onNavigate = vi.fn();
+    render(
+      <RateView
+        day="2020-03-01"
+        mains={PREVIEW_MAINS}
+        scores={{}}
+        previous={{}}
+        available
+        save={vi.fn<SaveRating>()}
+        onNavigate={onNavigate}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Next day" }));
+    expect(onNavigate).toHaveBeenCalledWith("2020-03-02");
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("sends a waiting change for its own day when moving to another day", async () => {
+    const save = vi.fn<SaveRating>().mockResolvedValue({ ok: true });
+    const { unmount } = renderRate(save, true, "2020-03-01");
+    move("Health", 3);
+    fireEvent.click(screen.getByRole("button", { name: "Previous day" }));
+    unmount();
+    expect(save).toHaveBeenCalledWith("health", "2020-03-01", 3);
   });
 
   it("puts the sliders in the side columns in wheel order", () => {

@@ -41,6 +41,7 @@ function AverageWheel({ mains }: { mains: MainAggregate[] }) {
     <LifeWheel
       labels={mains.map((m) => (m.archived ? `${m.name} (archived)` : m.name))}
       italic={mains.map((m) => m.archived)}
+      colors={mains.map((m) => m.color)}
       values={values}
       max={max}
       rings={ringSteps(max)}

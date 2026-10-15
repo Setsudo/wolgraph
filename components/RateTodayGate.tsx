@@ -2,21 +2,24 @@
 
 import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { isValidDay } from "@/lib/date";
 import { useLocalToday } from "./useLocalToday";
 
 /**
- * The rate screen rates the browser-local today, which the server cannot know.
- * Renders children while `day` matches it (or before hydration), otherwise
- * replaces the URL with /rate?day=<local today>.
+ * Today and earlier days can be rated; the browser-local today is what the server
+ * cannot know. Renders children for a valid `day` up to that today (or before
+ * hydration). A missing or invalid day, or one after the local today, replaces
+ * the URL with /rate?day=<local today>.
  */
 export function RateTodayGate({ day, children }: { day: string | null; children?: ReactNode }) {
   const router = useRouter();
   const today = useLocalToday();
-  const stale = day === null || (today !== null && today !== day);
+  const valid = day !== null && isValidDay(day);
+  const redirect = today !== null && (!valid || day > today);
 
   useEffect(() => {
-    if (today !== null && today !== day) router.replace(`/rate?day=${today}`);
-  }, [router, today, day]);
+    if (redirect) router.replace(`/rate?day=${today}`);
+  }, [router, redirect, today]);
 
-  return stale ? <p className="text-navy/60">Loading…</p> : children;
+  return !valid || redirect ? <p className="text-navy/60">Loading…</p> : children;
 }

@@ -1,20 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { RateMain, SaveRating } from "@/lib/data/ratings";
-import { formatDayLabel } from "@/lib/date";
+import { addDays, formatDayLabel } from "@/lib/date";
 import { sideOrder } from "@/lib/rate/layout";
 import { displayedScore } from "@/lib/rate/score";
 import { SAVE_DEBOUNCE_MS, SAVE_FAILED_MESSAGE, TOAST_MS } from "./DayView";
 import type { SaveStatus } from "./HourSheet";
 import { LifeWheel } from "./LifeWheel";
 import { RatingSlider } from "./RatingSlider";
+import { useLocalToday } from "./useLocalToday";
 
 export const UNAVAILABLE_NOTICE = "Scores aren't saved yet: the ratings table hasn't been set up.";
 const RINGS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 type RateViewProps = {
-  /** The browser-local today (YYYY-MM-DD) being rated. */
+  /** The day (YYYY-MM-DD) being rated: the browser-local today or an earlier day. */
   day: string;
   mains: RateMain[];
   scores: Record<string, number>;
@@ -22,12 +24,26 @@ type RateViewProps = {
   /** False when the ratings table is missing: sliders still move, nothing is sent. */
   available: boolean;
   save: SaveRating;
+  /** Defaults to router.push(`/rate?day=${day}`). */
+  onNavigate?: (day: string) => void;
 };
 
 type Scores = Record<string, number>;
 
 /** "Rate your life" (SPEC §10): one 0-10 slider per main category around the wheel. */
-export function RateView({ day, mains, scores, previous, available, save }: RateViewProps) {
+export function RateView({
+  day,
+  mains,
+  scores,
+  previous,
+  available,
+  save,
+  onNavigate,
+}: RateViewProps) {
+  const router = useRouter();
+  const today = useLocalToday();
+  const goTo = (to: string) => (onNavigate ? onNavigate(to) : router.push(`/rate?day=${to}`));
+  const canGoNext = today !== null && day < today;
   const initial = useCallback(
     (id: string) => displayedScore(id, scores, previous),
     [scores, previous],
@@ -141,6 +157,7 @@ export function RateView({ day, mains, scores, previous, available, save }: Rate
         key={m.id}
         label={m.name}
         value={valueOf(m.id)}
+        color={m.color}
         status={status[m.id] ?? null}
         onChange={(v) => change(m.id, v)}
       />
@@ -152,13 +169,37 @@ export function RateView({ day, mains, scores, previous, available, save }: Rate
   const side = "hidden md:flex md:flex-col md:self-stretch";
   // Spacers keep the first and last slider level with the wheel's label band.
   const spacer = <div aria-hidden="true" className="shrink-0 basis-[6%]" />;
+  // Same day arrows as the Day screen.
+  const navButton =
+    "flex h-11 w-11 items-center justify-center rounded-lg text-[24px] disabled:opacity-30";
 
   return (
     <div className="mx-auto w-full max-w-[1240px] text-navy">
       <h1 className="text-center font-display text-[28px] font-normal tracking-[0.12em] uppercase md:text-[44px]">
         Wheel of Life
       </h1>
-      <p className="mt-1 text-center text-[15px] text-navy/60">{formatDayLabel(day)}</p>
+      <div className="mt-1 flex items-center justify-center gap-1">
+        <button
+          type="button"
+          aria-label="Previous day"
+          className={navButton}
+          onClick={() => goTo(addDays(day, -1))}
+        >
+          ‹
+        </button>
+        <span className="flex h-11 items-center px-2 font-display text-[20px]">
+          {formatDayLabel(day)}
+        </span>
+        <button
+          type="button"
+          aria-label="Next day"
+          className={navButton}
+          disabled={!canGoNext}
+          onClick={() => goTo(addDays(day, 1))}
+        >
+          ›
+        </button>
+      </div>
       {!available && (
         <p className="mt-2 text-center text-[14px] text-amber">{UNAVAILABLE_NOTICE}</p>
       )}
@@ -172,6 +213,7 @@ export function RateView({ day, mains, scores, previous, available, save }: Rate
         <div className="min-w-0">
           <LifeWheel
             labels={mains.map((m) => m.name)}
+            colors={mains.map((m) => m.color)}
             values={values}
             max={10}
             maxWidthClass="max-w-[720px]"

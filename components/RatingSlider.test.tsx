@@ -58,4 +58,27 @@ describe("RatingSlider", () => {
     rerender(<RatingSlider label="Career" value={6} onChange={onChange} status="saved" />);
     expect(screen.getByRole("status").textContent).toBe("Saved");
   });
+
+  it("draws the fill and thumb in teal without a colour", () => {
+    const { container } = render(<RatingSlider label="Health" value={4} onChange={() => {}} />);
+    const fill = container.querySelector('[data-part="fill"]') as HTMLElement;
+    expect(fill.className).toContain("bg-teal");
+    expect(fill.style.backgroundColor).toBe("");
+    const input = screen.getByRole("slider") as HTMLInputElement;
+    expect(input.style.getPropertyValue("--thumb")).toBe("");
+    expect(input.className).toContain("[--thumb:var(--color-teal)]");
+    expect(input.className).toContain("[&::-webkit-slider-thumb]:bg-[var(--thumb)]");
+    expect(input.className).toContain("[&::-moz-range-thumb]:bg-[var(--thumb)]");
+  });
+
+  it("draws the fill and thumb in the category colour, keeping the teal focus ring", () => {
+    const { container } = render(
+      <RatingSlider label="Career" value={4} onChange={() => {}} color="#C8553D" />,
+    );
+    const fill = container.querySelector('[data-part="fill"]') as HTMLElement;
+    expect(fill.style.backgroundColor).toBe("rgb(200, 85, 61)");
+    const input = screen.getByRole("slider") as HTMLInputElement;
+    expect(input.style.getPropertyValue("--thumb")).toBe("#C8553D");
+    expect(input.className).toContain("focus-visible:[&::-webkit-slider-thumb]:outline-teal");
+  });
 });

@@ -138,6 +138,41 @@ describe("LifeWheel", () => {
     expect(labels[2].getAttribute("font-style")).toBeNull();
   });
 
+  it("draws plain teal dots without colors", () => {
+    const c = wheel();
+    for (const d of all(c, "dot")) {
+      expect(d.getAttribute("r")).toBe("4");
+      expect(d.getAttribute("class")).toBe("fill-teal");
+      expect(d.getAttribute("fill")).toBeNull();
+      expect(d.getAttribute("stroke-width")).toBeNull();
+    }
+  });
+
+  it("fills each dot with its category colour, larger and outlined in cream", () => {
+    const colors = [
+      "#2F8C8C",
+      "#5B6CC0",
+      "#3E8E4F",
+      "#C9831F",
+      "#C8553D",
+      "#7A5BA8",
+      "#C2557F",
+      "#4F7C9E",
+    ];
+    const c = wheel({ colors });
+    const dots = all(c, "dot");
+    dots.forEach((d, i) => {
+      expect(d.getAttribute("fill")).toBe(colors[i]);
+      expect(d.getAttribute("r")).toBe("5");
+      expect(d.getAttribute("class")).toBe("stroke-cream");
+      expect(d.getAttribute("stroke-width")).toBe("1.5");
+    });
+    // Polygon and labels keep their colours.
+    expect(all(c, "data")[0].getAttribute("class")).toContain("fill-teal");
+    expect(all(c, "data-outline")[0].getAttribute("class")).toContain("stroke-teal");
+    expect(all(c, "label")[0].parentElement?.getAttribute("class")).toContain("fill-navy");
+  });
+
   it("is an img with the given label", () => {
     wheel({ ariaLabel: "Scores: Health 8" });
     expect(screen.getByRole("img", { name: "Scores: Health 8" })).toBeTruthy();

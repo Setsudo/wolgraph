@@ -46,7 +46,7 @@
 - `lib/lifewheel/geometry.ts` — pure life-wheel geometry: sector spokes and centres, value points, ring radii, label arcs
 - `lib/data/trends.ts` — `getTrendData(period)`: server-side load of categories and period entries, aggregated
 - `lib/trends/format.ts` — trends period labels, hour formatting, `?kind&anchor` parsing and hrefs
-- `components/LifeWheel.tsx` — generic reference-style wheel chart (labels, values on 0..max, rings); used by Trends
+- `components/LifeWheel.tsx` — generic reference-style wheel chart (labels, values on 0..max, rings, optional category-coloured dots); used by Trends and Rate
 - `components/trends/` — trends screen: `TrendsView` (shared tree), `PeriodControls` (client toggle and arrows), `TrendsBody`, `TotalsTable`, `CanonicalizeTrendsUrl` (client redirect to today)
 - `app/dev/trends-preview/` — dev-only trends preview with fixture data (`?kind&anchor&empty=1&few=1`); 404 in production
 - `proxy.ts` — Next 16 proxy (middleware): session refresh and route protection
@@ -62,12 +62,12 @@
 - `components/useLocalToday.ts` — browser-local today (null during SSR)
 - `app/dev/day-preview/` — dev-only day screen preview with fixtures and a fake save (`?fail=1`); 404 in production
 - `supabase/migrations/0002_ratings.sql` — `ratings` table (0-10 per main category per day), main-only trigger, RLS
-- `app/(app)/rate/page.tsx` — Rate your life screen (home): reads `?day` (browser-local today), loads ratings, renders `RateView`
+- `app/(app)/rate/page.tsx` — Rate your life screen (home): reads `?day` (browser-local today or an earlier day), loads ratings, renders `RateView`
 - `app/(app)/rate/actions.ts` (+ test) — `saveRating` Server Action (0-10 integer, future-day guard, upsert, revalidates `/rate`)
 - `lib/data/ratings.ts` (+ test) — `getRatings(day)`: active mains, the day's scores, previous scores, `available` (false when the table is missing)
 - `lib/rate/layout.ts` (+ test) — `sideOrder(n)`: which mains go in the left and right slider columns
 - `lib/rate/score.ts` (+ test) — score range, `isValidScore`, `displayedScore` (today > previous > 5)
-- `components/RateView.tsx` (+ test) — rate screen client: wheel, sliders, optimistic debounced saves, rollback toast, missing-table notice
-- `components/RatingSlider.tsx` (+ test) — 0-10 range slider with tick numbers and a value box under the thumb
-- `components/RateTodayGate.tsx` — sends `/rate` to `/rate?day=<browser-local today>`
+- `components/RateView.tsx` (+ test) — rate screen client: previous/next day arrows, category-coloured wheel and sliders, optimistic debounced saves, rollback toast, missing-table notice
+- `components/RatingSlider.tsx` (+ test) — 0-10 range slider with tick numbers, a value box under the thumb and an optional category colour
+- `components/RateTodayGate.tsx` (+ test) — sends `/rate` with no, invalid or future `?day` to `/rate?day=<browser-local today>`; today and past days render
 - `app/dev/rate-preview/` — dev-only rate screen preview with fixtures and a fake save (`?unavailable=1`, `?fail=1`); 404 in production

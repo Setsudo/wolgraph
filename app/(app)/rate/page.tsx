@@ -12,7 +12,7 @@ async function RateContent({ searchParams }: { searchParams: SearchParams }) {
   // Per-user data: never prerender.
   await connection();
   const { day } = await searchParams;
-  // ?day is the browser's local today, filled in by RateTodayGate.
+  // ?day is the day to rate; RateTodayGate fills in the local today and turns away later days.
   if (!isValidDay(day) || day > latestDayAnywhere(new Date())) return <RateTodayGate day={null} />;
   const { mains, scores, previous, available } = await getRatings(day);
   return (

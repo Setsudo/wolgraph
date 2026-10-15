@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, type CSSProperties } from "react";
 import { SCORE_MAX, SCORE_MIN } from "@/lib/rate/score";
 import type { SaveStatus } from "./HourSheet";
 
@@ -10,6 +10,8 @@ type RatingSliderProps = {
   value: number;
   onChange: (value: number) => void;
   status?: SaveStatus;
+  /** Category colour (hex from the data) for the filled track and thumb; teal when absent. */
+  color?: string;
 };
 
 const TICKS = Array.from({ length: SCORE_MAX - SCORE_MIN + 1 }, (_, i) => SCORE_MIN + i);
@@ -24,17 +26,17 @@ const at = (v: number) =>
 
 // Literal class names so Tailwind picks them up. Track and fill are drawn by the divs behind the input.
 const INPUT = [
-  "relative m-0 block h-[22px] w-full cursor-pointer appearance-none bg-transparent focus:outline-none",
+  "relative m-0 block h-[22px] w-full cursor-pointer appearance-none bg-transparent focus:outline-none [--thumb:var(--color-teal)]",
   "[&::-webkit-slider-runnable-track]:h-[22px] [&::-webkit-slider-runnable-track]:bg-transparent",
   "[&::-moz-range-track]:bg-transparent",
-  "[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:box-border [&::-webkit-slider-thumb]:h-[22px] [&::-webkit-slider-thumb]:w-[22px] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-[3px] [&::-webkit-slider-thumb]:border-solid [&::-webkit-slider-thumb]:border-cream [&::-webkit-slider-thumb]:bg-teal",
-  "[&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:box-border [&::-moz-range-thumb]:h-[22px] [&::-moz-range-thumb]:w-[22px] [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-[3px] [&::-moz-range-thumb]:border-solid [&::-moz-range-thumb]:border-cream [&::-moz-range-thumb]:bg-teal",
+  "[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:box-border [&::-webkit-slider-thumb]:h-[22px] [&::-webkit-slider-thumb]:w-[22px] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-[3px] [&::-webkit-slider-thumb]:border-solid [&::-webkit-slider-thumb]:border-cream [&::-webkit-slider-thumb]:bg-[var(--thumb)]",
+  "[&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:box-border [&::-moz-range-thumb]:h-[22px] [&::-moz-range-thumb]:w-[22px] [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-[3px] [&::-moz-range-thumb]:border-solid [&::-moz-range-thumb]:border-cream [&::-moz-range-thumb]:bg-[var(--thumb)]",
   "focus-visible:[&::-webkit-slider-thumb]:outline-2 focus-visible:[&::-webkit-slider-thumb]:outline-offset-2 focus-visible:[&::-webkit-slider-thumb]:outline-teal",
   "focus-visible:[&::-moz-range-thumb]:outline-2 focus-visible:[&::-moz-range-thumb]:outline-offset-2 focus-visible:[&::-moz-range-thumb]:outline-teal",
 ].join(" ");
 
 /** One category's 0-10 rating: native range input, tick numbers and a value box under the thumb. */
-export function RatingSlider({ label, value, onChange, status = null }: RatingSliderProps) {
+export function RatingSlider({ label, value, onChange, status = null, color }: RatingSliderProps) {
   const id = useId();
   return (
     <div className="text-navy">
@@ -55,7 +57,7 @@ export function RatingSlider({ label, value, onChange, status = null }: RatingSl
           aria-hidden="true"
           data-part="fill"
           className="absolute left-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-teal"
-          style={{ width: at(value) }}
+          style={{ width: at(value), backgroundColor: color }}
         />
         <input
           id={id}
@@ -68,6 +70,7 @@ export function RatingSlider({ label, value, onChange, status = null }: RatingSl
           aria-valuetext={`${value} out of 10`}
           onChange={(event) => onChange(Number(event.target.value))}
           className={INPUT}
+          style={color ? ({ "--thumb": color } as CSSProperties) : undefined}
         />
       </div>
       <div aria-hidden="true" className="relative mt-1 h-[34px]">
