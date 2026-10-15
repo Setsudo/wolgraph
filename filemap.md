@@ -17,7 +17,7 @@
 - `app/layout.tsx`, `app/globals.css` — root layout; theme tokens (`@theme`)
 - `app/page.tsx` (+ `page.test.tsx`) — redirects `/` to `/rate` (home); the test also covers `/day`
 - `app/(auth)/login/page.tsx` — sign-in (placeholder)
-- `app/(app)/layout.tsx` — signed-in shell with main nav (Wheel, Day, Trends, Categories)
+- `app/(app)/layout.tsx` — signed-in shell with main nav (Rate, Log, Trends, Categories)
 - `app/(app)/day/page.tsx` — client redirect from `/day` to `/day/<browser-local today>`
 - `app/(app)/day/[date]/page.tsx`, `app/(app)/trends/page.tsx` — app screens (placeholders)
 - `app/(app)/categories/page.tsx` — Categories screen (loads categories, passes Server Actions)
