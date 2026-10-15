@@ -15,7 +15,7 @@ Ranked by the owner. The loop takes the top open item, builds it with tests, ver
 
 ## Connect Wheel and Day (owner-approved 2026-10-15)
 Wheel = how each area feels (0-10 score), Day = where the time went (hours). Same categories, angles and dates; these items make the two read as one system.
-8. [ ] Wheel matches Day: category colors on the Wheel's labels and value dots, and the same previous/next day arrows (rate any past day, future days locked). UI only.
+8. [x] Wheel matches Day: category colors on the Wheel's value dots and sliders (labels stay navy for contrast), and the same previous/next day arrows (rate any past day, future days locked). UI only.
 9. [ ] Trends shows ratings beside hours: average score per category for the period next to average hours, on the same wheel layout and in the totals table. Reads existing tables, no schema change.
 10. [ ] Rename nav items: "Wheel" becomes "Rate", "Day" becomes "Log" (routes unchanged).
 
