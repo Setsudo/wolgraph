@@ -22,3 +22,6 @@
 - `supabase/test/auth_stub.sql` — stub `auth` schema and roles so migrations run in PGlite tests
 - `lib/data/types.ts` — `Database` and row types matching the migrations
 - `lib/data/schema.test.ts` — schema, constraint and RLS tests (PGlite)
+- `lib/data/period.ts` — week/month period math on YYYY-MM-DD strings (UTC-safe)
+- `lib/data/aggregates.ts` — per-period totals and per-day averages per main category
+- `lib/radar/geometry.ts` — pure radar chart geometry (axes, scale, polygons, labels)

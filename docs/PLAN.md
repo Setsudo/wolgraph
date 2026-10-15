@@ -14,7 +14,7 @@ Verify: Vitest suite runs the migration in PGlite with a stub `auth` schema (`au
 `lib/wheel/geometry.ts`: given main categories with subcategory counts, return segments `{categoryId, ring, startAngle, endAngle, innerR, outerR, path, labelPoint, labelAngle}` per SPEC §7; `hitTest(x, y)`; opacity from hours. No React.
 Verify: unit tests for 1, 3, 8 and 12 mains; mains with 0 and 5 subs; angles sum to 360; hit tests at sector centres and boundaries; label angles keep text upright.
 
-## 4. [ ] Radar geometry and aggregation (Medium; after 2)
+## 4. [x] Radar geometry and aggregation (Medium; after 2)
 `lib/radar/geometry.ts` (axis angles, polygon points, ring paths) and `lib/data/aggregates.ts`: totals and per-day averages per active main category for a week (Mon–Sun) or calendar month, rolling subcategory hours into their main, excluding days with no entries from the divisor.
 Verify: fixture-based unit tests including archived categories, empty period, a main with only sub entries, month length 28/31.
 
