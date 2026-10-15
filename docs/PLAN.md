@@ -26,7 +26,7 @@ Verify: unit test for redirect logic; e2e against the dev Supabase project once 
 `components/Wheel.tsx` + `HourSheet.tsx` + `(app)/day/[date]` per SPEC §6.2 and §7: render from geometry, tap and keyboard selection, sheet stepper and chips, optimistic debounced upsert/delete via Server Action, rollback and toast on error, day navigation, future days read-only, center total with >24 warning.
 Verify: component tests for stepper math and keyboard navigation; Playwright screenshots at 390 and 1440 px; e2e log-reload-persist once credentials exist.
 
-## 7. [ ] Categories screen (Medium; after 5)
+## 7. [x] Categories screen (Medium; after 5)
 `(app)/categories` per SPEC §6.4: add main (palette picker), add sub, inline rename with validation (1–40 chars, unique among active siblings), archive, Archived section with restore.
 Verify: component tests for validation; e2e rename-and-history check once credentials exist; screenshots at 390 and 1440 px.
 
