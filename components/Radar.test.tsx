@@ -31,6 +31,22 @@ describe("Radar", () => {
     expect(container.querySelectorAll('[data-part="axis"]')).toHaveLength(4);
   });
 
+  it("crops the viewBox to the web plus top and bottom label bands", () => {
+    const { container } = render(<Radar mains={MAINS} />);
+    // SIZE 400, radius 128: y from 200 - 128 - 36 = 36, height 2 * 128 + 72 = 328.
+    expect(container.querySelector("svg")?.getAttribute("viewBox")).toBe("0 36 400 328");
+  });
+
+  it("places ring scale labels off the 12 o'clock axis", () => {
+    const { container } = render(<Radar mains={MAINS} />);
+    const rings = [...container.querySelectorAll('[data-part="ring-label"]')];
+    expect(rings.map((t) => t.textContent)).toEqual(["2h", "4h", "6h"]);
+    for (const t of rings) {
+      expect(Number(t.getAttribute("x"))).toBeGreaterThan(200);
+      expect(t.getAttribute("text-anchor")).toBe("start");
+    }
+  });
+
   it("summarizes averages in its aria-label", () => {
     render(<Radar mains={MAINS} />);
     expect(

@@ -4,6 +4,7 @@ import {
   labelPosition,
   polygonPath,
   radarPoints,
+  ringLabelPosition,
   ringPath,
   ringSteps,
   scaleMax,
@@ -12,11 +13,15 @@ import {
 import { polarToXY } from "@/lib/wheel/geometry";
 import { formatNumber } from "@/lib/trends/format";
 
-const SIZE = 360;
+const SIZE = 400;
 const CENTER = SIZE / 2;
 /** Room around the web for axis labels. */
-const OPTS: RadarOptions = { size: SIZE, padding: 80 };
+const OPTS: RadarOptions = { size: SIZE, padding: 72 };
 const RADIUS = SIZE / 2 - (OPTS.padding ?? 0);
+/** Vertical room above and below the web for the top and bottom axis labels. */
+const LABEL_BAND = 36;
+/** Cropped to the web plus label bands; horizontally 0..SIZE (side labels may overflow). */
+const RADAR_VIEWBOX = `0 ${CENTER - RADIUS - LABEL_BAND} ${SIZE} ${2 * RADIUS + 2 * LABEL_BAND}`;
 
 /** Radar of average hours per day, one axis per main category. Pure render. */
 export function Radar({ mains }: { mains: MainAggregate[] }) {
@@ -30,10 +35,10 @@ export function Radar({ mains }: { mains: MainAggregate[] }) {
 
   return (
     <svg
-      viewBox={`0 0 ${SIZE} ${SIZE}`}
+      viewBox={RADAR_VIEWBOX}
       role="img"
       aria-label={label}
-      className="mx-auto block w-full max-w-[440px] overflow-visible"
+      className="mx-auto block w-full max-w-[520px] overflow-visible"
     >
       <g className="fill-none stroke-navy/15" strokeWidth={1}>
         {rings.map((v) => (
@@ -45,11 +50,21 @@ export function Radar({ mains }: { mains: MainAggregate[] }) {
         })}
       </g>
       <g className="fill-navy/50" fontSize={10}>
-        {rings.map((v) => (
-          <text key={v} x={CENTER + 4} y={CENTER - (RADIUS * v) / max} dominantBaseline="middle">
-            {`${v}h`}
-          </text>
-        ))}
+        {rings.map((v) => {
+          const pos = ringLabelPosition(v, max, n, OPTS);
+          return (
+            <text
+              key={v}
+              data-part="ring-label"
+              x={pos.x}
+              y={pos.y}
+              textAnchor="start"
+              dominantBaseline="middle"
+            >
+              {`${v}h`}
+            </text>
+          );
+        })}
       </g>
       <path
         data-part="data"

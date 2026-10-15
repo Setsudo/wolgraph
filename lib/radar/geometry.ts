@@ -101,3 +101,22 @@ export function labelPosition(
   const anchor = nearVertical ? "middle" : a < 180 ? "start" : "end";
   return { x, y, anchor };
 }
+
+/** Distance of ring scale labels beyond their ring, along the bisector. */
+const RING_LABEL_OFFSET = 4;
+
+/**
+ * Ring scale label anchor for the ring at `value` on a 0..max scale: on the
+ * bisector between axis 0 and axis 1 (180 / n degrees), at the ring's radius
+ * plus a small outward offset, so it clears the axis labels at 12 o'clock.
+ */
+export function ringLabelPosition(
+  value: number,
+  max: number,
+  n: number,
+  opts: RadarOptions,
+): Point {
+  const angle = n > 0 ? 180 / n : 0;
+  const frac = max > 0 ? clamp(value, max) / max : 0;
+  return polarToXY(radius(opts) * frac + RING_LABEL_OFFSET, angle, opts.size);
+}

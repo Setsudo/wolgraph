@@ -4,6 +4,7 @@ import {
   labelPosition,
   polygonPath,
   radarPoints,
+  ringLabelPosition,
   ringPath,
   ringSteps,
   scaleMax,
@@ -125,5 +126,29 @@ describe("labelPosition", () => {
     expect(labelPosition(19, 36, OPTS).anchor).toBe("middle");
     expect(labelPosition(20, 36, OPTS).anchor).toBe("end");
     expect(labelPosition(35, 36, OPTS).anchor).toBe("middle");
+  });
+});
+
+describe("ringLabelPosition", () => {
+  it("sits on the bisector of axes 0 and 1, 4 units beyond the ring", () => {
+    const opts = { size: SIZE, padding: 72 };
+    const r = SIZE / 2 - 72;
+    const p = ringLabelPosition(4, 8, 4, opts); // half radius, angle 45°
+    const d = r / 2 + 4;
+    expect(p.x).toBeCloseTo(C + d * Math.SQRT1_2);
+    expect(p.y).toBeCloseTo(C - d * Math.SQRT1_2);
+  });
+
+  it("uses 180 / n degrees and the full radius at max", () => {
+    const p = ringLabelPosition(6, 6, 3, OPTS); // 60°
+    expect(p.x).toBeCloseTo(C + (R + 4) * Math.sin(Math.PI / 3));
+    expect(p.y).toBeCloseTo(C - (R + 4) * Math.cos(Math.PI / 3));
+    expect(dist(p)).toBeCloseTo(R + 4);
+  });
+
+  it("never lands on the 12 o'clock axis", () => {
+    for (const n of [3, 5, 8]) {
+      for (const v of [1, 2, 3]) expect(ringLabelPosition(v, 3, n, OPTS).x).toBeGreaterThan(C);
+    }
   });
 });
