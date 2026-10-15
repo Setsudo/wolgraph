@@ -1,11 +1,13 @@
 import Link from "next/link";
-import type { PeriodAggregate } from "@/lib/data/aggregates";
-import { Radar } from "@/components/Radar";
+import type { MainAggregate, PeriodAggregate } from "@/lib/data/aggregates";
+import { LifeWheel } from "@/components/LifeWheel";
+import { ringSteps, scaleMax } from "@/lib/radar/geometry";
+import { formatNumber } from "@/lib/trends/format";
 import { TotalsTable } from "./TotalsTable";
 
 export const FEW_MAINS_NOTE = "Add at least 3 categories to see the radar.";
 
-/** Radar and totals for a period, or the empty state. Pure render. */
+/** Wheel of averages and totals for a period, or the empty state. Pure render. */
 export function TrendsBody({ aggregate }: { aggregate: PeriodAggregate }) {
   if (aggregate.isEmpty) {
     return (
@@ -22,11 +24,31 @@ export function TrendsBody({ aggregate }: { aggregate: PeriodAggregate }) {
   return (
     <div className="flex flex-col gap-6">
       {showRadar ? (
-        <Radar mains={aggregate.mains} />
+        <AverageWheel mains={aggregate.mains} />
       ) : (
         <p className="mx-auto w-full max-w-[440px] text-[13px] text-navy/60">{FEW_MAINS_NOTE}</p>
       )}
       <TotalsTable aggregate={aggregate} />
     </div>
+  );
+}
+
+/** Average hours per day, one sector per main category. */
+function AverageWheel({ mains }: { mains: MainAggregate[] }) {
+  const values = mains.map((m) => m.average);
+  const max = scaleMax(values);
+  return (
+    <LifeWheel
+      labels={mains.map((m) => (m.archived ? `${m.name} (archived)` : m.name))}
+      italic={mains.map((m) => m.archived)}
+      values={values}
+      max={max}
+      rings={ringSteps(max)}
+      ringLabel={(v) => `${v}h`}
+      ariaLabel={
+        "Average hours per day: " +
+        mains.map((m) => `${m.name} ${formatNumber(m.average)}`).join(", ")
+      }
+    />
   );
 }

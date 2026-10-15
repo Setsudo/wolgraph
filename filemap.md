@@ -41,10 +41,11 @@
 - `lib/data/categoryRules.ts` — pure category rules: palette, name validation, default color, sort order, action types
 - `lib/data/categories.ts` — server category data access: `listCategories` and mutations (RLS, error mapping)
 - `lib/data/aggregates.ts` — per-period totals and per-day averages per main category
-- `lib/radar/geometry.ts` — pure radar chart geometry (axes, scale, polygons, labels)
+- `lib/radar/geometry.ts` — trend scale helpers (`scaleMax`, `ringSteps`) and `polygonPath`
+- `lib/lifewheel/geometry.ts` — pure life-wheel geometry: sector spokes and centres, value points, ring radii, label arcs
 - `lib/data/trends.ts` — `getTrendData(period)`: server-side load of categories and period entries, aggregated
 - `lib/trends/format.ts` — trends period labels, hour formatting, `?kind&anchor` parsing and hrefs
-- `components/Radar.tsx` — pure SVG radar of average hours per day per main category
+- `components/LifeWheel.tsx` — generic reference-style wheel chart (labels, values on 0..max, rings); used by Trends
 - `components/trends/` — trends screen: `TrendsView` (shared tree), `PeriodControls` (client toggle and arrows), `TrendsBody`, `TotalsTable`, `CanonicalizeTrendsUrl` (client redirect to today)
 - `app/dev/trends-preview/` — dev-only trends preview with fixture data (`?kind&anchor&empty=1&few=1`); 404 in production
 - `proxy.ts` — Next 16 proxy (middleware): session refresh and route protection
