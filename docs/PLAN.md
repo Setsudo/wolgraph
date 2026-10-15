@@ -22,7 +22,7 @@ Verify: fixture-based unit tests including archived categories, empty period, a 
 Supabase server/browser clients in `lib/supabase`, middleware session refresh, `(auth)/login` magic-link form with sent/error states, sign-out, `(app)` routes redirect to login without a session, `/` redirects to `/day/<today>`.
 Verify: unit test for redirect logic; e2e against the dev Supabase project once credentials exist (SPEC §8), otherwise reported as blocked on credentials.
 
-## 6. [ ] Daily entry screen (Careful; after 3, 5)
+## 6. [x] Daily entry screen (Careful; after 3, 5)
 `components/Wheel.tsx` + `HourSheet.tsx` + `(app)/day/[date]` per SPEC §6.2 and §7: render from geometry, tap and keyboard selection, sheet stepper and chips, optimistic debounced upsert/delete via Server Action, rollback and toast on error, day navigation, future days read-only, center total with >24 warning.
 Verify: component tests for stepper math and keyboard navigation; Playwright screenshots at 390 and 1440 px; e2e log-reload-persist once credentials exist.
 
