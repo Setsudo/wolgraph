@@ -30,7 +30,7 @@ Verify: component tests for stepper math and keyboard navigation; Playwright scr
 `(app)/categories` per SPEC §6.4: add main (palette picker), add sub, inline rename with validation (1–40 chars, unique among active siblings), archive, Archived section with restore.
 Verify: component tests for validation; e2e rename-and-history check once credentials exist; screenshots at 390 and 1440 px.
 
-## 8. [ ] Trends screen (Medium; after 4, 5)
+## 8. [x] Trends screen (Medium; after 4, 5)
 `components/Radar.tsx` + `(app)/trends` per SPEC §6.3: Week/Month toggle, period arrows, radar, totals table, empty state.
 Verify: component test with fixture data; screenshots at 390 and 1440 px.
 
