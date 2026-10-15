@@ -11,11 +11,14 @@ export const WHEEL_SIZE = 400;
 export type WheelSegment = Segment & {
   color: string; // the main's color (subs share it)
   mainName: string;
-  subName: string | null; // null for inner segments and for a main with no subs
-  /** Category the sheet edits: the main itself for inner segments and subless mains. */
+  subName: string | null; // null for inner segments (including a subless main's full-span one)
+  /** Category the sheet edits: the main itself for inner segments, the sub for outer ones. */
   editId: string;
   editHours: number;
-  /** Hours driving fill opacity: inner = main own + its subs; outer = that segment's own. */
+  /**
+   * Hours driving fill opacity: inner = main own + its subs (a subless main's
+   * full-span segment is just its own hours); outer = that sub's own.
+   */
   fillHours: number;
   /** "{Main} · general", "{Main} · {Sub}" or "{Main}". */
   title: string;
@@ -23,9 +26,26 @@ export type WheelSegment = Segment & {
   ariaLabel: string;
 };
 
-/** Truncates to at most `max` characters, ending with "…" when shortened. */
-export function truncate(text: string, max: number): string {
-  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
+/** Average glyph width as a fraction of font size, for fitting labels. */
+const GLYPH_WIDTH = 0.56;
+
+/**
+ * Fits a label into `available` viewBox units: shrinks the font from baseSize
+ * down to minSize, then truncates with "…" so that
+ * length * GLYPH_WIDTH * fontSize <= available.
+ */
+export function fitLabel(
+  text: string,
+  available: number,
+  baseSize: number,
+  minSize: number = 9,
+): { text: string; fontSize: number } {
+  const fit = available / (text.length * GLYPH_WIDTH);
+  const fontSize = Math.min(baseSize, fit);
+  if (fontSize >= minSize) return { text, fontSize };
+  const maxLen = Math.max(0, Math.floor(available / (GLYPH_WIDTH * minSize) + 1e-9));
+  const cut = maxLen === 0 ? "" : `${text.slice(0, maxLen - 1)}…`;
+  return { text: cut, fontSize: minSize };
 }
 
 /** Builds the wheel from active categories (in display order) and hours per category id. */
@@ -50,8 +70,8 @@ export function buildWheel(
   return segments.map((seg) => {
     const main = byId.get(seg.mainId)!;
     const subs = subsOf.get(main.id) ?? [];
-    const sub =
-      seg.ring === "outer" && seg.categoryId !== main.id ? byId.get(seg.categoryId)! : null;
+    // Outer segments are always subs; a subless main is one inner segment.
+    const sub = seg.ring === "outer" ? byId.get(seg.categoryId)! : null;
     const editId = sub ? sub.id : main.id;
     const editHours = h(editId);
     const fillHours =
@@ -84,9 +104,9 @@ export type NavKey = "ArrowLeft" | "ArrowRight" | "ArrowUp" | "ArrowDown";
 
 /**
  * Segment key after pressing an arrow on `current`. Left/Right move within the
- * ring (wrapping), Down goes inner -> first outer segment of the same main, Up
- * goes outer -> its main's inner segment. With nothing selected, the first
- * inner segment.
+ * ring (wrapping), Down goes inner -> first outer segment of the same main
+ * (staying put on a subless main, which has none), Up goes outer -> its main's
+ * inner segment. With nothing selected, the first inner segment.
  */
 export function navigate(segments: Segment[], current: string | null, key: NavKey): string | null {
   if (segments.length === 0) return null;

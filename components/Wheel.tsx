@@ -1,8 +1,8 @@
 "use client";
 
 import { useId, type KeyboardEvent, type Ref } from "react";
-import { fillOpacity } from "@/lib/wheel/geometry";
-import { navigate, truncate, WHEEL_SIZE, type NavKey, type WheelSegment } from "@/lib/wheel/model";
+import { arcPath, fillOpacity, polarToXY, RADII } from "@/lib/wheel/geometry";
+import { fitLabel, navigate, WHEEL_SIZE, type NavKey, type WheelSegment } from "@/lib/wheel/model";
 import { formatHours } from "@/lib/hours";
 
 type WheelProps = {
@@ -19,11 +19,76 @@ type WheelProps = {
 
 const NAV_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"]);
 const C = WHEEL_SIZE / 2;
+const R = WHEEL_SIZE / 2;
+/** Label arcs stop this many degrees short of each segment edge. */
+const LABEL_INSET_DEG = 2;
+/** Breathing room subtracted from a label arc's length before fitting. */
+const LABEL_PAD = 8;
+/** How far inward of a sub's name its hours line sits (viewBox units). */
+const SUB_HOURS_OFFSET = 14;
+
+type NameLabel = {
+  arcId: string;
+  arc: string;
+  text: string;
+  fontSize: number;
+  className: string;
+};
+type HoursLabel = { x: number; y: number; angle: number; text: string; fontSize: number };
+
+/** Where and how big a segment's name and hours go (SPEC §7: names follow the arc). */
+function labelLayout(
+  s: WheelSegment,
+  arcId: string,
+): { name: NameLabel | null; hours: HoursLabel | null } {
+  const subless = s.ring === "inner" && s.outerR > RADII.inner[1] * R;
+  const [nameR, baseSize] =
+    s.ring === "outer"
+      ? [((RADII.outer[0] + RADII.outer[1]) / 2) * R, 12]
+      : subless
+        ? [0.8 * R, 14]
+        : [((RADII.inner[0] + RADII.inner[1]) / 2) * R, 13];
+  const start = s.startAngle + LABEL_INSET_DEG;
+  const end = s.endAngle - LABEL_INSET_DEG;
+  const mid = (s.startAngle + s.endAngle) / 2;
+  const reverse = mid > 90 && mid < 270;
+  const available = (nameR * (end - start) * Math.PI) / 180 - LABEL_PAD;
+  const label = s.subName ?? s.mainName;
+  const fitted = fitLabel(label, available, baseSize);
+  const name =
+    end > start && fitted.text
+      ? {
+          arcId,
+          arc: arcPath(nameR, start, end, WHEEL_SIZE, reverse),
+          text: fitted.text,
+          fontSize: fitted.fontSize,
+          className: s.ring === "outer" ? "fill-navy/80" : "fill-navy",
+        }
+      : null;
+
+  // Subs and subless mains show their hours; a main with subs shows only its name.
+  let hours: HoursLabel | null = null;
+  if (s.fillHours > 0 && (s.ring === "outer" || subless)) {
+    const hoursR = subless ? 0.52 * R : nameR - SUB_HOURS_OFFSET;
+    const p = polarToXY(hoursR, mid, WHEEL_SIZE);
+    hours = {
+      x: p.x,
+      y: p.y,
+      angle: s.labelAngle,
+      text: formatHours(s.fillHours),
+      fontSize: subless ? 13 : 12,
+    };
+  }
+  return { name, hours };
+}
 
 /** Two-ring day wheel (SPEC §7). One tab stop; arrows move between segments. */
 export function Wheel({ segments, selectedKey, total, onSelect, onOpen, ref }: WheelProps) {
   const idPrefix = useId();
   const segId = (key: string) => `${idPrefix}-${key}`;
+  // Referenced by URL fragment from <textPath href>, so keep it to safe characters.
+  const arcId = (key: string) => `${idPrefix}-arc-${key}`.replace(/[^A-Za-z0-9_-]/g, "_");
+  const labels = segments.map((s) => ({ key: s.key, ...labelLayout(s, arcId(s.key)) }));
   const selected = segments.find((s) => s.key === selectedKey) ?? null;
   const over = total > 24;
 
@@ -80,9 +145,14 @@ export function Wheel({ segments, selectedKey, total, onSelect, onOpen, ref }: W
           data-testid="selection"
         />
       )}
+      <defs>
+        {labels.map(
+          ({ key, name }) => name && <path key={key} id={name.arcId} d={name.arc} fill="none" />,
+        )}
+      </defs>
       <g className="pointer-events-none select-none" aria-hidden="true">
-        {segments.map((s) => (
-          <SegmentLabel key={s.key} segment={s} />
+        {labels.map(({ key, name, hours }) => (
+          <SegmentLabel key={key} name={name} hours={hours} />
         ))}
         <text
           x={C}
@@ -107,48 +177,32 @@ export function Wheel({ segments, selectedKey, total, onSelect, onOpen, ref }: W
   );
 }
 
-function SegmentLabel({ segment: s }: { segment: WheelSegment }) {
-  const transform = `translate(${s.labelPoint.x} ${s.labelPoint.y}) rotate(${s.labelAngle})`;
-  const hours = s.fillHours > 0 ? formatHours(s.fillHours) : null;
-
-  if (s.ring === "inner") {
-    return (
-      <text
-        transform={transform}
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontSize={13}
-        className="fill-navy"
-      >
-        {truncate(s.mainName, 12)}
-      </text>
-    );
-  }
-  const wide = s.endAngle - s.startAngle >= 20;
-  if (s.subName !== null && wide) {
-    return (
-      <text transform={transform} textAnchor="middle" dominantBaseline="central" fontSize={12}>
-        <tspan x={0} dy={hours ? "-0.6em" : 0} className="fill-navy/80">
-          {truncate(s.subName, 8)}
-        </tspan>
-        {hours && (
-          <tspan x={0} dy="1.2em" className="fill-navy">
-            {hours}
-          </tspan>
-        )}
-      </text>
-    );
-  }
-  if (!hours) return null;
+function SegmentLabel({ name, hours }: { name: NameLabel | null; hours: HoursLabel | null }) {
   return (
-    <text
-      transform={transform}
-      textAnchor="middle"
-      dominantBaseline="central"
-      fontSize={12}
-      className="fill-navy"
-    >
-      {hours}
-    </text>
+    <>
+      {name && (
+        <text
+          fontSize={name.fontSize}
+          textAnchor="middle"
+          dominantBaseline="central"
+          className={name.className}
+        >
+          <textPath href={`#${name.arcId}`} startOffset="50%">
+            {name.text}
+          </textPath>
+        </text>
+      )}
+      {hours && (
+        <text
+          transform={`translate(${hours.x} ${hours.y}) rotate(${hours.angle})`}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={hours.fontSize}
+          className="fill-navy"
+        >
+          {hours.text}
+        </text>
+      )}
+    </>
   );
 }

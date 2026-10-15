@@ -10,9 +10,9 @@ export type WheelOptions = { size: number; gapDeg?: number }; // gapDeg default 
 export type Ring = "inner" | "outer";
 export type Segment = {
   key: string; // `${ring}:${categoryId}` (unique)
-  categoryId: string; // main id (inner, and outer when main has no subs) or sub id
+  categoryId: string; // main id (inner) or sub id (outer)
   mainId: string;
-  ring: Ring;
+  ring: Ring; // a main with no subs is one inner segment spanning both rings
   startAngle: number; // unpadded; 0 <= start < 360
   endAngle: number; // unpadded; may be 360
   innerR: number;
@@ -120,7 +120,12 @@ function makeSegment(
   };
 }
 
-/** Lays out the two-ring wheel: inner segments in main order, then outer segments. */
+/**
+ * Lays out the two-ring wheel: inner segments in main order, then outer
+ * segments. A main with subs gets an inner-ring segment and its subs split its
+ * angle in the outer ring; a main with no subs is a single inner segment that
+ * spans both rings (inner radius of the inner ring to outer radius of the outer).
+ */
 export function layoutWheel(mains: WheelInput, opts: WheelOptions): Segment[] {
   const n = mains.length;
   if (n === 0) return [];
@@ -135,14 +140,12 @@ export function layoutWheel(mains: WheelInput, opts: WheelOptions): Segment[] {
   mains.forEach((main, i) => {
     const start = (i * 360) / n;
     const end = ((i + 1) * 360) / n;
-    inner.push(makeSegment("inner", main.id, main.id, start, end, innerIn, innerOut, size, gapDeg));
     const k = main.subIds.length;
-    if (k === 0) {
-      outer.push(
-        makeSegment("outer", main.id, main.id, start, end, outerIn, outerOut, size, gapDeg),
-      );
-      return;
-    }
+    const innerEdge = k === 0 ? outerOut : innerOut; // subless: span both rings
+    inner.push(
+      makeSegment("inner", main.id, main.id, start, end, innerIn, innerEdge, size, gapDeg),
+    );
+    if (k === 0) return;
     const span = end - start;
     main.subIds.forEach((subId, j) => {
       const s = start + (j * span) / k;
@@ -174,8 +177,39 @@ export function hitTest(segments: Segment[], x: number, y: number, size: number)
   return null;
 }
 
-/** Fill opacity for a segment's hours: 0 for none, then 0.25 rising linearly to 1 at 8 h. */
+/**
+ * SVG path (an open arc, no fill) at radius r from startAngle to endAngle,
+ * clockwise. With reverse, it runs from endAngle back to startAngle
+ * (counterclockwise), so text on it reads upright in the lower half. A span of
+ * 360° or more is drawn as two half arcs.
+ */
+export function arcPath(
+  r: number,
+  startAngle: number,
+  endAngle: number,
+  size: number,
+  reverse: boolean,
+): string {
+  const span = endAngle - startAngle;
+  const rr = fmt(r);
+  const [from, to] = reverse ? [endAngle, startAngle] : [startAngle, endAngle];
+  const sweep = reverse ? 0 : 1;
+  if (span >= 360 - EPS) {
+    const half = (from + to) / 2;
+    return (
+      `M ${pt(r, from, size)} A ${rr} ${rr} 0 0 ${sweep} ${pt(r, half, size)} ` +
+      `A ${rr} ${rr} 0 0 ${sweep} ${pt(r, to, size)}`
+    );
+  }
+  const large = span > 180 ? 1 : 0;
+  return `M ${pt(r, from, size)} A ${rr} ${rr} 0 ${large} ${sweep} ${pt(r, to, size)}`;
+}
+
+/**
+ * Fill opacity for a segment's hours: 0 for none (or not a number), otherwise
+ * a 0.4 floor rising linearly to 1 at 8 h, so any logged time reads as filled.
+ */
 export function fillOpacity(hours: number): number {
   if (!(hours > 0)) return 0;
-  return 0.25 + (0.75 * Math.min(hours, 8)) / 8;
+  return 0.4 + (0.6 * Math.min(hours, 8)) / 8;
 }
