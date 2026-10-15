@@ -113,7 +113,7 @@ export function Wheel({ segments, selectedKey, total, onSelect, onOpen, ref }: W
       aria-activedescendant={selected ? segId(selected.key) : undefined}
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      className="mx-auto block w-full max-w-[520px] rounded-full outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-4 focus-visible:outline-teal"
+      className="mx-auto block w-full max-w-[520px] md:max-w-[600px] rounded-full outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-4 focus-visible:outline-teal"
     >
       {segments.map((s) => (
         <path

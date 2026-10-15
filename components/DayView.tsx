@@ -187,52 +187,64 @@ export function DayView({ date, categories, entries, save, onNavigate }: DayView
     "flex h-11 w-11 items-center justify-center rounded-lg text-[24px] disabled:opacity-30";
 
   return (
-    <div className="mx-auto w-full max-w-[872px] text-navy">
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          aria-label="Previous day"
-          className={navButton}
-          onClick={() => goTo(addDays(date, -1))}
-        >
-          ‹
-        </button>
-        <span className="relative">
-          <button type="button" className="h-11 px-2 font-display text-[20px]" onClick={openPicker}>
-            {formatDayLabel(date)}
+    <div className="mx-auto w-full max-w-[1040px] text-navy">
+      {/* From 768px this row mirrors the body row's columns so the header centres over the wheel. */}
+      <div className="md:flex md:justify-center md:gap-12">
+        <div className="flex items-center gap-1 md:w-[min(600px,58vw)] md:min-w-0 md:justify-center">
+          <button
+            type="button"
+            aria-label="Previous day"
+            className={navButton}
+            onClick={() => goTo(addDays(date, -1))}
+          >
+            ‹
           </button>
-          <input
-            ref={dateInputRef}
-            type="date"
-            tabIndex={-1}
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-px opacity-0"
-            value={date}
-            max={today ?? undefined}
-            onChange={(event) => {
-              const day = event.target.value;
-              if (isValidDay(day) && day !== date && (today === null || day <= today)) goTo(day);
-            }}
-          />
-        </span>
-        <button
-          type="button"
-          aria-label="Next day"
-          className={navButton}
-          disabled={!canGoNext}
-          onClick={() => goTo(addDays(date, 1))}
-        >
-          ›
-        </button>
-        {today !== null && date !== today && (
-          <button type="button" className="ml-auto h-11 px-2 text-teal" onClick={() => goTo(today)}>
-            Today
+          <span className="relative">
+            <button
+              type="button"
+              className="h-11 px-2 font-display text-[20px]"
+              onClick={openPicker}
+            >
+              {formatDayLabel(date)}
+            </button>
+            <input
+              ref={dateInputRef}
+              type="date"
+              tabIndex={-1}
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-px opacity-0"
+              value={date}
+              max={today ?? undefined}
+              onChange={(event) => {
+                const day = event.target.value;
+                if (isValidDay(day) && day !== date && (today === null || day <= today)) goTo(day);
+              }}
+            />
+          </span>
+          <button
+            type="button"
+            aria-label="Next day"
+            className={navButton}
+            disabled={!canGoNext}
+            onClick={() => goTo(addDays(date, 1))}
+          >
+            ›
           </button>
-        )}
+          {today !== null && date !== today && (
+            <button
+              type="button"
+              className="ml-auto h-11 px-2 text-teal md:ml-0"
+              onClick={() => goTo(today)}
+            >
+              Today
+            </button>
+          )}
+        </div>
+        <div aria-hidden="true" className="hidden md:block md:w-[300px] md:shrink-0" />
       </div>
 
-      <div className="mt-4 md:flex md:items-start md:gap-8">
-        <div className="min-w-0 md:flex-1">
+      <div className="mt-4 md:flex md:items-center md:justify-center md:gap-12">
+        <div className="min-w-0 md:w-[min(600px,58vw)]">
           <Wheel
             ref={wheelRef}
             segments={segments}
