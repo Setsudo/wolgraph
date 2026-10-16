@@ -82,6 +82,23 @@ describe("getRatings", () => {
     );
   });
 
+  it("lists active mains only (no subs), ordered by sort_order then name", async () => {
+    let categoriesQuery: Query | null = null;
+    createClient.mockResolvedValue(
+      fakeClient((q) => {
+        if (q.table === "categories") categoriesQuery = q;
+        return q.table === "categories" ? { data: MAINS, error: null } : { data: [], error: null };
+      }),
+    );
+    await getRatings("2026-10-15");
+    const filters = categoriesQuery!.filters;
+    expect(filters).toContainEqual(["is", "parent_id", null]);
+    expect(filters.filter(([m]) => m === "order")).toEqual([
+      ["order", "sort_order", { ascending: true }],
+      ["order", "name", { ascending: true }],
+    ]);
+  });
+
   it("asks for the most recent score strictly before the day", async () => {
     const seen: Query[] = [];
     createClient.mockResolvedValue(

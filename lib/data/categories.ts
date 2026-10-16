@@ -97,10 +97,14 @@ export async function addSubCategory(parentId: string, name: string): Promise<Ac
   return withUser(async (supabase, userId) => {
     const { data: parent, error: parentError } = await supabase
       .from("categories")
-      .select("color, parent_id")
+      .select("color, parent_id, archived_at")
       .eq("id", parentId)
       .maybeSingle();
-    if (parentError || !parent || parent.parent_id !== null) return fail(parentError);
+    // An archived main (e.g. archived from another device) takes no new subs: the sub
+    // would be active under a hidden main, listed nowhere on the Categories screen.
+    if (parentError || !parent || parent.parent_id !== null || parent.archived_at !== null) {
+      return fail(parentError);
+    }
     const { data: siblings, error: readError } = await supabase
       .from("categories")
       .select("sort_order")

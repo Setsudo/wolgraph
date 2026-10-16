@@ -53,6 +53,30 @@ export const FIXTURE_CATEGORIES: Category[] = [
   row("side-project", "Side project", "#C8553D", 0, "career", ARCHIVED),
 ];
 
+/**
+ * `?subs=1`: the 8 seeded mains and archived Hobbies; Health has 3 subs, Career 10
+ * (the charter maximum) plus the archived Side project.
+ */
+export const SUB_FIXTURE_CATEGORIES: Category[] = [
+  ...FIXTURE_CATEGORIES.filter((c) => c.parent_id === null),
+  ...["Sleep", "Exercise", "Meditation"].map((name, i) =>
+    row(`health-${i}`, name, "#2F8C8C", i, "health"),
+  ),
+  ...[
+    "Deep work",
+    "Meetings",
+    "Email",
+    "Planning",
+    "Hiring",
+    "Mentoring",
+    "Writing",
+    "Reviews",
+    "Admin",
+    "Learning",
+  ].map((name, i) => row(`career-${i}`, name, "#C8553D", i, "career")),
+  row("side-project", "Side project", "#C8553D", 10, "career", ARCHIVED),
+];
+
 export type FakeOp =
   | { type: "addMain"; name: string; color: string }
   | { type: "addSub"; parentId: string; name: string }
@@ -89,7 +113,8 @@ export function applyFakeOp(categories: Category[], op: FakeOp, now: string): Fa
     }
     case "addSub": {
       const parent = find(op.parentId);
-      if (!parent || parent.parent_id !== null) return failed(categories, GENERIC_ERROR_MESSAGE);
+      if (!parent || parent.parent_id !== null || parent.archived_at !== null)
+        return failed(categories, GENERIC_ERROR_MESSAGE);
       if (isDuplicateName(categories, parent.id, op.name))
         return failed(categories, DUPLICATE_MESSAGE);
       const siblings = categories.filter((c) => c.parent_id === parent.id);

@@ -137,3 +137,19 @@ describe("withRatings", () => {
     expect(agg.mains.every((m) => m.averageRating === null)).toBe(true);
   });
 });
+
+describe("withRatings with subcategories", () => {
+  it("keeps ratings main-only: subs roll their hours into the main, sub ids match no row", () => {
+    const agg = withRatings(
+      aggregatePeriod(
+        [cat("career", 0), cat("deep", 0, { parent: "career" })],
+        [entry("deep", "2026-10-12", 3)],
+        periodFor("week", "2026-10-14"),
+      ),
+      // The second is rejected by the ratings_enforce_main trigger; ignored here if it ever appeared.
+      [rating("career", "2026-10-12", 6), rating("deep", "2026-10-12", 1)],
+    );
+    expect(agg.mains).toHaveLength(1);
+    expect(agg.mains[0]).toMatchObject({ mainId: "career", total: 3, averageRating: 6 });
+  });
+});

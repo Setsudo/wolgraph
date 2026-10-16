@@ -135,3 +135,36 @@ describe("aggregatePeriod", () => {
     expect(agg.mains.find((m) => m.mainId === "health")).toMatchObject({ total: 1, average: 0.33 });
   });
 });
+
+describe("aggregatePeriod with subcategories", () => {
+  // Career: 10 subs (one archived); Health: 3 subs and no own entries.
+  const subCats: CategoryRow[] = [
+    cat("health", 0, { name: "Health" }),
+    cat("career", 1, { name: "Career" }),
+    ...["sleep", "exercise", "meditation"].map((id, i) => cat(id, i, { parent: "health" })),
+    ...Array.from({ length: 10 }, (_, i) =>
+      cat(`p${i}`, i, { parent: "career", archived: i === 9 }),
+    ),
+  ];
+
+  it("a day with only sub entries counts as a day with entries", () => {
+    const agg = aggregatePeriod(subCats, [entry("sleep", "2026-10-12", 7)], week);
+    expect(agg.isEmpty).toBe(false);
+    expect(agg.daysWithEntries).toBe(1);
+    expect(agg.mains.find((m) => m.mainId === "health")).toMatchObject({ total: 7, average: 7 });
+  });
+
+  it("rolls every sub, archived ones included, into its main's total and per-day average", () => {
+    const entries = [
+      entry("career", "2026-10-12", 1), // the main directly
+      ...Array.from({ length: 10 }, (_, i) => entry(`p${i}`, "2026-10-13", 0.5)), // p9 archived
+      entry("p9", "2026-10-14", 2), // a day with only an archived sub's hours
+      entry("meditation", "2026-10-14", 0.25),
+    ];
+    const agg = aggregatePeriod(subCats, entries, week);
+    expect(agg.daysWithEntries).toBe(3);
+    expect(agg.mains.map((m) => m.mainId)).toEqual(["health", "career"]); // mains only
+    expect(agg.mains[1]).toMatchObject({ total: 8, average: 2.67, archived: false }); // 1 + 5 + 2
+    expect(agg.mains[0]).toMatchObject({ total: 0.25, average: 0.08 });
+  });
+});

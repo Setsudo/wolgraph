@@ -257,6 +257,86 @@ describe("active sibling name uniqueness", () => {
   });
 });
 
+describe("subcategories end to end", () => {
+  // A fresh main per test keeps names clear of the other blocks' rows.
+  let n = 0;
+  const freshMain = async (color = "#7A5BA8") => addCategory(USER_A, `Studio ${++n}`, null, color);
+  const colorOf = async (id: string) =>
+    (await rows<{ color: string }>("select color from categories where id = $1", [id]))[0].color;
+  const archive = (id: string) =>
+    db.query("update categories set archived_at = now() where id = $1", [id]);
+  const restore = (id: string) =>
+    db.query("update categories set archived_at = null where id = $1", [id]);
+
+  it("a sub always holds its main's color, whatever is written to it", async () => {
+    const main = await freshMain("#7A5BA8");
+    const sub = await addCategory(USER_A, "Pottery", main, "#000000");
+    expect(await colorOf(sub)).toBe("#7A5BA8");
+    await db.query("update categories set color = '#111111' where id = $1", [sub]);
+    expect(await colorOf(sub)).toBe("#7A5BA8");
+    await db.query("update categories set name = 'Ceramics' where id = $1", [sub]);
+    expect(await colorOf(sub)).toBe("#7A5BA8");
+  });
+
+  it("rename keeps the id; active sibling names stay unique case-insensitively on rename and restore", async () => {
+    const main = await freshMain();
+    const pottery = await addCategory(USER_A, "Pottery", main);
+    const glaze = await addCategory(USER_A, "Glaze", main);
+    await db.query("update categories set name = 'Ceramics' where id = $1", [pottery]);
+    expect(
+      (await rows<{ name: string }>("select name from categories where id = $1", [pottery]))[0]
+        .name,
+    ).toBe("Ceramics");
+    await expect(
+      db.query("update categories set name = 'CERAMICS' where id = $1", [glaze]),
+    ).rejects.toMatchObject({ code: "23505" });
+
+    // Archive, then restore: the name is free while archived, taken again on restore.
+    await archive(pottery);
+    const newer = await addCategory(USER_A, "ceramics", main);
+    await expect(restore(pottery)).rejects.toMatchObject({ code: "23505" });
+    await archive(newer);
+    await restore(pottery);
+    const [{ archived }] = await rows<{ archived: boolean }>(
+      "select archived_at is not null as archived from categories where id = $1",
+      [pottery],
+    );
+    expect(archived).toBe(false);
+  });
+
+  it("hours on a sub and on its main the same day are separate rows; archiving keeps them", async () => {
+    const main = await freshMain();
+    const sub = await addCategory(USER_A, "Wheel throwing", main);
+    const insert = (categoryId: string, hours: number) =>
+      db.query(
+        "insert into entries (user_id, category_id, day, hours) values ($1, $2, '2026-07-01', $3)",
+        [USER_A, categoryId, hours],
+      );
+    await insert(main, 1.5);
+    await insert(sub, 2.25);
+    await archive(sub);
+    // The main's day total per SPEC §5: its own entry + its subs' entries (archived subs too).
+    const [{ total }] = await rows<{ total: string }>(
+      `select sum(e.hours)::text as total
+         from entries e join categories c on c.id = e.category_id
+        where e.user_id = $1 and e.day = '2026-07-01' and coalesce(c.parent_id, c.id) = $2`,
+      [USER_A, main],
+    );
+    expect(total).toBe("3.75");
+  });
+
+  it("archiving a main does not cascade in the database (the archive action archives its subs)", async () => {
+    const main = await freshMain();
+    const sub = await addCategory(USER_A, "Kiln", main);
+    await archive(main);
+    const [{ archived }] = await rows<{ archived: boolean }>(
+      "select archived_at is not null as archived from categories where id = $1",
+      [sub],
+    );
+    expect(archived).toBe(false);
+  });
+});
+
 describe("row-level security", () => {
   let catA: string;
 

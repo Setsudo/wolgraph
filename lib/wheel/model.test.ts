@@ -120,3 +120,98 @@ describe("fitLabel", () => {
     expect(fitLabel("Health", -5, 12).text).toBe("");
   });
 });
+
+describe("buildWheel with crowded subcategories", () => {
+  // Eight mains; Health has 3 subs, Career has 10 (the charter maximum), the rest none.
+  const mainIds = [
+    "health",
+    "growth",
+    "finance",
+    "family",
+    "career",
+    "relax",
+    "relations",
+    "spirit",
+  ];
+  const crowded: DayCategory[] = [
+    ...mainIds.map((id) => ({
+      id,
+      parentId: null,
+      name: id,
+      color: `#00000${mainIds.indexOf(id)}`,
+    })),
+    ...["Sleep", "Exercise", "Meditation"].map((name) => ({
+      id: `health-${name}`,
+      parentId: "health",
+      name,
+      color: "#000000",
+    })),
+    ...Array.from({ length: 10 }, (_, i) => ({
+      id: `career-${i}`,
+      parentId: "career",
+      name: `Project ${i}`,
+      color: "#000004",
+    })),
+  ];
+  const hours = { "health-Sleep": 7, "career-3": 1.5, career: 0.5, "career-archived": 2 };
+  const segs = buildWheel(crowded, hours);
+  const outerOf = (mainId: string) => segs.filter((s) => s.ring === "outer" && s.mainId === mainId);
+
+  it("subs split their main's angle equally and contiguously in sort order", () => {
+    for (const [mainId, k] of [
+      ["health", 3],
+      ["career", 10],
+    ] as const) {
+      const main = segs.find((s) => s.key === `inner:${mainId}`)!;
+      const outer = outerOf(mainId);
+      expect(outer).toHaveLength(k);
+      expect(outer[0].startAngle).toBeCloseTo(main.startAngle, 9);
+      expect(outer[k - 1].endAngle).toBeCloseTo(main.endAngle, 9);
+      for (let j = 0; j < k; j++) {
+        expect(outer[j].endAngle - outer[j].startAngle).toBeCloseTo(45 / k, 9);
+        if (j > 0) expect(outer[j].startAngle).toBeCloseTo(outer[j - 1].endAngle, 9);
+      }
+      // A main with subs keeps to the inner ring.
+      expect(main.outerR).toBeCloseTo(0.66 * 200, 9);
+    }
+    expect(outerOf("career").map((s) => s.subName)).toEqual(
+      Array.from({ length: 10 }, (_, i) => `Project ${i}`),
+    );
+  });
+
+  it("every sub is labelled 'Main, Sub, N hours' and takes the main's color", () => {
+    const sub = segs.find((s) => s.key === "outer:career-3")!;
+    expect(sub.ariaLabel).toBe("career, Project 3, 1.5 hours");
+    expect(sub.title).toBe("career · Project 3");
+    expect(sub.color).toBe("#000004");
+    expect(outerOf("career").every((s) => s.color === "#000004")).toBe(true);
+  });
+
+  it("the main's inner segment edits its own hours and fills with own + active subs", () => {
+    const career = segs.find((s) => s.key === "inner:career")!;
+    expect(career.editId).toBe("career");
+    expect(career.editHours).toBe(0.5);
+    expect(career.fillHours).toBe(2); // 0.5 own + 1.5 on Project 3; the archived sub is not on the wheel
+    expect(dayTotal(hours)).toBe(11); // the day total still counts the archived sub's 2 h
+  });
+
+  it("arrow keys reach every outer segment from the first inner one", () => {
+    const reached = new Set<string>();
+    let key = navigate(segs, null, "ArrowRight");
+    for (let i = 0; i < mainIds.length; i++) {
+      reached.add(key!);
+      const down = navigate(segs, key, "ArrowDown");
+      if (down !== key) {
+        // Walk the whole outer ring once from this main's first sub.
+        let outer = down;
+        for (let j = 0; j < 13; j++) {
+          reached.add(outer!);
+          outer = navigate(segs, outer, "ArrowRight");
+        }
+        expect(outer).toBe(down); // wrapped all the way round
+      }
+      key = navigate(segs, key, "ArrowRight");
+    }
+    expect(reached).toEqual(new Set(segs.map((s) => s.key)));
+  });
+});

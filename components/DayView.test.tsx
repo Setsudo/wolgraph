@@ -174,3 +174,37 @@ describe("DayView with fresh server data", () => {
     expect(toast.className).toContain("fixed bottom-6");
   });
 });
+
+describe("DayView with subcategories", () => {
+  const wheel = () => screen.getByRole("group", { name: "Day wheel" });
+  const title = () => screen.getByRole("heading", { level: 2 }).textContent;
+
+  it("logs on a sub and on its main directly: both save, both count in the day total", async () => {
+    const save = vi.fn<SaveEntry>().mockResolvedValue({ ok: true });
+    const date = todayLocal();
+    // An archived sub's entry: not on the wheel, but part of the day total.
+    const entries = [...PREVIEW_ENTRIES, { categoryId: "archived-sub", hours: 1 }];
+    render(<DayView date={date} categories={PREVIEW_CATEGORIES} entries={entries} save={save} />);
+    expect(screen.getAllByRole("button", { name: /hours$/ })).toHaveLength(12); // 8 mains + 4 subs
+    expect(wheel().textContent).toContain("18.5 h"); // 17.5 on the wheel + 1 archived
+
+    fireEvent.click(deepWork());
+    expect(title()).toBe("Career · Deep work");
+    fireEvent.click(plus());
+
+    fireEvent.click(screen.getByRole("button", { name: /^Career, general, / }));
+    expect(title()).toBe("Career · general");
+    expect(screen.getByText("0.00 h")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Add 1 hours" }));
+
+    await act(async () => vi.advanceTimersByTime(400));
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenCalledWith(date, "deep-work", 4.25);
+    expect(save).toHaveBeenCalledWith(date, "career", 1);
+    expect(deepWork().getAttribute("aria-label")).toBe("Career, Deep work, 4.25 hours");
+    expect(
+      screen.getByRole("button", { name: /^Career, general, / }).getAttribute("aria-label"),
+    ).toBe("Career, general, 1 hours");
+    expect(wheel().textContent).toContain("19.75 h");
+  });
+});

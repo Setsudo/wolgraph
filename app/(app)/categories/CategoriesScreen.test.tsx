@@ -186,3 +186,60 @@ describe("CategoriesScreen", () => {
     );
   });
 });
+
+describe("CategoriesScreen subcategories", () => {
+  const mainItem = (name: string) =>
+    screen.getByRole("button", { name: `Archive ${name}` }).closest("li")!;
+  const rowOf = (name: string) =>
+    screen.getByRole("button", { name: `Archive ${name}` }).parentElement!;
+  const dotColor = (row: HTMLElement) =>
+    (row.querySelector("span[aria-hidden]") as HTMLElement).style.backgroundColor;
+
+  function addSub(main: string, name: string) {
+    const item = mainItem(main);
+    fireEvent.click(within(item).getByRole("button", { name: "+ Add subcategory" }));
+    fireEvent.change(screen.getByRole("textbox", { name: `New subcategory of ${main}` }), {
+      target: { value: name },
+    });
+    fireEvent.click(within(item).getByRole("button", { name: "Add" }));
+  }
+
+  it("adds a sub under its main in the main's color, renames, archives and restores it", async () => {
+    setup();
+    addSub("Career", "  Deep work ");
+    await screen.findByRole("button", { name: "Archive Deep work" });
+    expect(mainItem("Career").contains(rowOf("Deep work"))).toBe(true);
+    expect(dotColor(rowOf("Deep work"))).toBe(dotColor(rowOf("Career")));
+    expect(dotColor(rowOf("Deep work"))).toBe("rgb(200, 85, 61)"); // #C8553D
+
+    rename("Deep work", "Focus");
+    await screen.findByRole("button", { name: "Archive Focus" });
+    expect(screen.queryByText("Deep work")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Archive Focus" }));
+    await screen.findByText("Archived Focus.");
+    expect(screen.queryByRole("button", { name: "Archive Focus" })).toBeNull();
+    expect(screen.getByText("Archived (3)")).toBeTruthy();
+    expect(within(archivedSection()).getByText("Focus")).toBeTruthy();
+    expect(within(archivedSection()).getAllByText("in Career")).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "Restore Focus" }));
+    await screen.findByRole("button", { name: "Archive Focus" });
+    expect(mainItem("Career").contains(rowOf("Focus"))).toBe(true);
+    expect(screen.getByText("Archived (2)")).toBeTruthy();
+  });
+
+  it("rejects a case-insensitive duplicate of an active sibling when adding a sub", () => {
+    setup();
+    addSub("Health", " SLEEP ");
+    expect(screen.getByRole("alert").textContent).toBe("A category with this name already exists.");
+    expect(within(mainItem("Health")).getAllByText(/sleep/i)).toHaveLength(1);
+  });
+
+  it("allows a sub named like an archived sibling", async () => {
+    setup();
+    addSub("Career", "side PROJECT");
+    await screen.findByRole("button", { name: "Archive side PROJECT" });
+    expect(within(archivedSection()).getByText("Side project")).toBeTruthy();
+  });
+});
