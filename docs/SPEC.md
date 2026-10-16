@@ -96,10 +96,12 @@ Palette carried from the slider prototype: cream `#F8F1E4` background, navy `#1F
 **Entry wheel** (see mockup in the project thread):
 - Two concentric rings, 12 o'clock start, clockwise, equal-angle sectors for active main categories in `sort_order`. Equal angles, not hour-proportional, so tap targets never shrink.
 - Inner ring: main categories. Outer ring: each main's subcategories split its angle equally. A main with no subs is one segment spanning both rings (owner-approved 2026-10-15; previously a duplicate outer segment).
-- Each segment's fill opacity scales with that day's hours (0 h = outline only, any logged time at least 40%, 8 h+ = full color); hours shown as text in segments with any time, category names follow the arc and shrink to fit.
+- The outer ring is display only (owner-approved 2026-10-16): sub segments are not tap or keyboard targets and are hidden from screen readers; tapping anywhere on a main's inner or outer segments selects that main, and the selected main's inner and outer segments all show the selection outline. Main sector angles stay equal (they match the Rate and Trends wheels).
+- Each segment's fill opacity scales with that day's hours (0 h = outline only, any logged time at least 40%, 8 h+ = full color); hours shown as text in segments with any time, category names follow the arc and shrink to fit. In the outer ring a sub's name and its hours are each drawn only when they fit in its arc, never overlapping.
 - "Today" is the user's local date, determined in the browser (server time on Vercel is UTC).
 - Center: day total "6.5 h of 24", turns amber over 24.
-- Minimum tap target 44 px; the wheel is keyboard operable (arrow keys move between segments, Enter opens the sheet) and every segment has an aria-label "Health, Exercise, 1.5 hours".
+- Minimum tap target 44 px; the wheel is keyboard operable (arrow keys move between mains, Enter opens the sheet) and every main has an aria-label "Health, 9.5 hours, 3 subcategories": its total (own + all its subs, archived included, as the fill shows), plus the number of active subs when it has any.
+- Hours sheet (owner-approved 2026-10-16): subcategories are edited here, not on the wheel. A main without subs keeps the single stepper. A main with subs shows its name, a muted "Total {h} h" line (the same total as its aria-label), then one row per category: "General" (the main's own hours) first, then each active sub in sort order, each with a compact − / + stepper (44 px buttons) and its own save status. One row is active (General when the sheet opens); tapping a row makes it active, and the quick-add chips ("Quick add to {row}") and Clear act on it. On phones the sheet is capped at 75% of the viewport height and the list scrolls.
 - Mobile first: the wheel is full width up to 520 px; on desktop it sits left with the sheet as a side panel instead of a bottom sheet.
 
 ## 8. External dependencies needing the owner

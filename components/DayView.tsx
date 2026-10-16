@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DayCategory, DayEntry, SaveEntry } from "@/lib/data/day";
 import { addDays, formatDayLabel, isValidDay } from "@/lib/date";
-import { archivedSubParents, buildWheel, dayTotal } from "@/lib/wheel/model";
+import { archivedSubParents, buildWheel, dayTotal, mainPanel } from "@/lib/wheel/model";
 import { HourSheet, type SaveStatus } from "./HourSheet";
 import { useLocalToday } from "./useLocalToday";
 import { Wheel } from "./Wheel";
@@ -53,6 +53,8 @@ export function DayView({ date, categories, entries, save, onNavigate }: DayView
   const [status, setStatus] = useState<Record<string, SaveStatus>>({});
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  /** Panel row that quick add and Clear target; null = General (the main's own row). */
+  const [activeRowId, setActiveRowId] = useState<string | null>(null);
   const [toastId, setToastId] = useState(0);
 
   const saved = useRef<Hours>(toHours(entries));
@@ -77,6 +79,7 @@ export function DayView({ date, categories, entries, save, onNavigate }: DayView
     [categories, hours, archivedParents],
   );
   const selected = segments.find((s) => s.key === selectedKey) ?? null;
+  const panel = selected ? mainPanel(segments, selected.mainId) : null;
 
   useEffect(() => {
     saveRef.current = save;
@@ -257,17 +260,28 @@ export function DayView({ date, categories, entries, save, onNavigate }: DayView
             segments={segments}
             selectedKey={selectedKey}
             total={dayTotal(hours)}
-            onSelect={setSelectedKey}
+            onSelect={(key) => {
+              setSelectedKey(key);
+              setActiveRowId(null);
+            }}
             onOpen={(key) => {
               setSelectedKey(key);
+              setActiveRowId(null);
               setSheetOpen(true);
             }}
           />
         </div>
         <HourSheet
           ref={sheetRef}
-          title={selected?.title ?? null}
+          title={selected ? (panel ? selected.mainName : selected.title) : null}
           hours={selected?.editHours ?? 0}
+          rows={
+            panel ? panel.rows.map((row) => ({ ...row, status: status[row.id] ?? null })) : null
+          }
+          total={panel?.total ?? 0}
+          activeId={activeRowId}
+          onActivate={setActiveRowId}
+          onRowChange={change}
           open={sheetOpen}
           readOnly={readOnly}
           future={future}

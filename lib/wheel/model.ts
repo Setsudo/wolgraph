@@ -24,11 +24,42 @@ export type WheelSegment = Segment & {
   /** "{Main} · general", "{Main} · {Sub}" or "{Main}". */
   title: string;
   /**
-   * "{Main}, {Sub or 'general'}, {h} hours"; h is editHours, except on a subless
-   * main's full-span segment, where it is fillHours (own + archived subs).
+   * Inner (main) segments: "{Main}, {fillHours} hours", plus ", {k} subcategories"
+   * when the main has k active subs. Outer segments are display only (aria-hidden)
+   * and keep "{Main}, {Sub}, {h} hours" for reference.
    */
   ariaLabel: string;
 };
+
+/** Key of the main's inner segment: what a click on any of its segments selects. */
+export function mainKey(segment: Pick<Segment, "mainId">): string {
+  return `inner:${segment.mainId}`;
+}
+
+export type PanelRow = { id: string; name: string; hours: number };
+export type MainPanel = {
+  /** Main own + active subs + archived subs: the inner segment's fillHours. */
+  total: number;
+  /** "General" (the main's own hours) first, then each active sub in sort order. */
+  rows: PanelRow[];
+};
+
+/**
+ * Hours-panel rows for a main with active subs, or null for a subless main (whose
+ * panel is the single stepper).
+ */
+export function mainPanel(segments: WheelSegment[], mainId: string): MainPanel | null {
+  const main = segments.find((s) => s.ring === "inner" && s.mainId === mainId);
+  const subs = segments.filter((s) => s.ring === "outer" && s.mainId === mainId);
+  if (!main || subs.length === 0) return null;
+  return {
+    total: main.fillHours,
+    rows: [
+      { id: main.editId, name: "General", hours: main.editHours },
+      ...subs.map((s) => ({ id: s.editId, name: s.subName ?? "", hours: s.editHours })),
+    ],
+  };
+}
 
 /** Average glyph width as a fraction of font size, for fitting labels. */
 const GLYPH_WIDTH = 0.56;
@@ -107,8 +138,6 @@ export function buildWheel(
       seg.ring === "inner"
         ? subs.reduce((sum, s) => sum + h(s.id), h(main.id) + (archivedHours.get(main.id) ?? 0))
         : editHours;
-    // A subless main's segment stands for the whole main, so it reads out what it shows.
-    const labelHours = seg.ring === "inner" && subs.length === 0 ? fillHours : editHours;
     const title = sub
       ? `${main.name} · ${sub.name}`
       : subs.length > 0
@@ -123,7 +152,10 @@ export function buildWheel(
       editHours,
       fillHours,
       title,
-      ariaLabel: `${main.name}, ${sub ? sub.name : "general"}, ${formatHours(labelHours)} hours`,
+      ariaLabel: sub
+        ? `${main.name}, ${sub.name}, ${formatHours(editHours)} hours`
+        : `${main.name}, ${formatHours(fillHours)} hours` +
+          (subs.length > 0 ? `, ${subs.length} subcategories` : ""),
     };
   });
 }
@@ -136,26 +168,20 @@ export function dayTotal(hours: Record<string, number>): number {
 export type NavKey = "ArrowLeft" | "ArrowRight" | "ArrowUp" | "ArrowDown";
 
 /**
- * Segment key after pressing an arrow on `current`. Left/Right move within the
- * ring (wrapping), Down goes inner -> first outer segment of the same main
- * (staying put on a subless main, which has none), Up goes outer -> its main's
- * inner segment. With nothing selected, the first inner segment.
+ * Main (inner segment) key after pressing an arrow on `current`. Left/Right move
+ * between mains (wrapping); outer sub segments are display only, so they are never
+ * a stop and Up/Down stay put. With nothing selected, or an outer key, the first
+ * main / that sub's main.
  */
 export function navigate(segments: Segment[], current: string | null, key: NavKey): string | null {
-  if (segments.length === 0) return null;
+  const mains = segments.filter((s) => s.ring === "inner");
+  if (mains.length === 0) return null;
   const cur = segments.find((s) => s.key === current);
-  if (!cur) return segments[0].key;
+  if (!cur) return mains[0].key;
+  const i = mains.findIndex((s) => s.mainId === cur.mainId);
   if (key === "ArrowLeft" || key === "ArrowRight") {
-    const ring = segments.filter((s) => s.ring === cur.ring);
-    const i = ring.indexOf(cur);
     const step = key === "ArrowRight" ? 1 : -1;
-    return ring[(i + step + ring.length) % ring.length].key;
+    return mains[(i + step + mains.length) % mains.length].key;
   }
-  if (key === "ArrowDown" && cur.ring === "inner") {
-    return segments.find((s) => s.ring === "outer" && s.mainId === cur.mainId)?.key ?? cur.key;
-  }
-  if (key === "ArrowUp" && cur.ring === "outer") {
-    return segments.find((s) => s.ring === "inner" && s.mainId === cur.mainId)?.key ?? cur.key;
-  }
-  return cur.key;
+  return mains[i].key;
 }

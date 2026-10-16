@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { DayCategory } from "@/lib/data/day";
-import { archivedSubParents, buildWheel, dayTotal, fitLabel, navigate } from "./model";
+import {
+  archivedSubParents,
+  buildWheel,
+  dayTotal,
+  fitLabel,
+  mainKey,
+  mainPanel,
+  navigate,
+} from "./model";
 
 const cats: DayCategory[] = [
   { id: "health", parentId: null, name: "Health", color: "#2F8C8C" },
@@ -31,7 +39,7 @@ describe("buildWheel", () => {
     expect(s.editHours).toBe(0.5);
     expect(s.fillHours).toBe(9);
     expect(s.title).toBe("Health · general");
-    expect(s.ariaLabel).toBe("Health, general, 0.5 hours");
+    expect(s.ariaLabel).toBe("Health, 9 hours, 2 subcategories");
   });
 
   it("outer sub segments edit the sub", () => {
@@ -52,9 +60,9 @@ describe("buildWheel", () => {
     expect(s.subName).toBeNull();
     expect(s.innerR).toBeCloseTo(0.32 * 200, 9);
     expect(s.outerR).toBeCloseTo(0.98 * 200, 9);
-    expect(s.ariaLabel).toBe("Family, general, 2 hours");
+    expect(s.ariaLabel).toBe("Family, 2 hours");
     expect(byKey["outer:family"]).toBeUndefined();
-    expect(byKey["inner:career"].ariaLabel).toBe("Career, general, 0 hours");
+    expect(byKey["inner:career"].ariaLabel).toBe("Career, 0 hours");
   });
 });
 
@@ -97,7 +105,9 @@ describe("archived subcategory hours", () => {
     const s = byKey["inner:health"];
     expect(s.fillHours).toBe(9); // 0.5 own + 7.5 sleep + 1 archived
     expect(s.editHours).toBe(0.5);
-    expect(s.ariaLabel).toBe("Health, general, 0.5 hours");
+    // The aria-label reads the same total the fill and the panel show.
+    expect(s.ariaLabel).toBe("Health, 9 hours, 2 subcategories");
+    expect(mainPanel(segs, "health")?.total).toBe(9);
     expect(byKey["outer:sleep"].fillHours).toBe(7.5);
     expect(byKey["outer:exercise"].fillHours).toBe(0);
   });
@@ -106,7 +116,7 @@ describe("archived subcategory hours", () => {
     const s = byKey["inner:family"];
     expect(s.fillHours).toBe(3.75);
     expect(s.editHours).toBe(2);
-    expect(s.ariaLabel).toBe("Family, general, 3.75 hours");
+    expect(s.ariaLabel).toBe("Family, 3.75 hours");
     expect(byKey["inner:career"].fillHours).toBe(0);
   });
 
@@ -125,28 +135,52 @@ describe("dayTotal", () => {
 describe("navigate", () => {
   const segs = buildWheel(cats, {});
 
-  it("starts at the first inner segment", () => {
+  it("starts at the first main", () => {
     expect(navigate(segs, null, "ArrowRight")).toBe("inner:health");
   });
 
-  it("Left/Right wrap within the ring", () => {
+  it("Left/Right move between mains only, wrapping", () => {
     expect(navigate(segs, "inner:health", "ArrowRight")).toBe("inner:family");
     expect(navigate(segs, "inner:career", "ArrowRight")).toBe("inner:health");
     expect(navigate(segs, "inner:health", "ArrowLeft")).toBe("inner:career");
-    expect(navigate(segs, "outer:exercise", "ArrowRight")).toBe("outer:sleep");
-    expect(navigate(segs, "outer:sleep", "ArrowLeft")).toBe("outer:exercise");
   });
 
-  it("Down goes to the main's first outer segment, Up back to the inner", () => {
-    expect(navigate(segs, "inner:health", "ArrowDown")).toBe("outer:sleep");
-    expect(navigate(segs, "inner:family", "ArrowDown")).toBe("inner:family"); // subless: stays
+  it("never stops on an outer segment: Up/Down stay on the main", () => {
+    for (const key of ["inner:health", "inner:family", "inner:career"]) {
+      expect(navigate(segs, key, "ArrowDown")).toBe(key);
+      expect(navigate(segs, key, "ArrowUp")).toBe(key);
+    }
+    // A stale outer key resolves to its main.
     expect(navigate(segs, "outer:exercise", "ArrowUp")).toBe("inner:health");
-    expect(navigate(segs, "outer:exercise", "ArrowDown")).toBe("outer:exercise");
-    expect(navigate(segs, "inner:health", "ArrowUp")).toBe("inner:health");
+    expect(navigate(segs, "outer:exercise", "ArrowRight")).toBe("inner:family");
   });
 
   it("returns null for an empty wheel", () => {
     expect(navigate([], null, "ArrowRight")).toBeNull();
+  });
+});
+
+describe("mainKey and mainPanel", () => {
+  const segs = buildWheel(cats, hours);
+
+  it("maps any of a main's segments to its inner key", () => {
+    for (const s of segs) expect(mainKey(s)).toBe(`inner:${s.mainId}`);
+  });
+
+  it("lists General then active subs in sort order, with the main's total", () => {
+    expect(mainPanel(segs, "health")).toEqual({
+      total: 9,
+      rows: [
+        { id: "health", name: "General", hours: 0.5 },
+        { id: "sleep", name: "Sleep", hours: 7.5 },
+        { id: "exercise", name: "Exercise", hours: 1 },
+      ],
+    });
+  });
+
+  it("is null for a subless main", () => {
+    expect(mainPanel(segs, "family")).toBeNull();
+    expect(mainPanel(segs, "career")).toBeNull();
   });
 });
 
@@ -236,7 +270,14 @@ describe("buildWheel with crowded subcategories", () => {
     );
   });
 
-  it("every sub is labelled 'Main, Sub, N hours' and takes the main's color", () => {
+  it("each main reads its total and sub count; subs take the main's color", () => {
+    expect(segs.find((s) => s.key === "inner:career")!.ariaLabel).toBe(
+      "career, 2 hours, 10 subcategories",
+    );
+    expect(segs.find((s) => s.key === "inner:health")!.ariaLabel).toBe(
+      "health, 7 hours, 3 subcategories",
+    );
+    expect(segs.find((s) => s.key === "inner:family")!.ariaLabel).toBe("family, 0 hours");
     const sub = segs.find((s) => s.key === "outer:career-3")!;
     expect(sub.ariaLabel).toBe("career, Project 3, 1.5 hours");
     expect(sub.title).toBe("career · Project 3");
@@ -252,23 +293,31 @@ describe("buildWheel with crowded subcategories", () => {
     expect(dayTotal(hours)).toBe(11); // the day total still counts the archived sub's 2 h
   });
 
-  it("arrow keys reach every outer segment from the first inner one", () => {
-    const reached = new Set<string>();
+  it("arrow keys visit every main once and no outer segment", () => {
+    const visited: string[] = [];
     let key = navigate(segs, null, "ArrowRight");
     for (let i = 0; i < mainIds.length; i++) {
-      reached.add(key!);
-      const down = navigate(segs, key, "ArrowDown");
-      if (down !== key) {
-        // Walk the whole outer ring once from this main's first sub.
-        let outer = down;
-        for (let j = 0; j < 13; j++) {
-          reached.add(outer!);
-          outer = navigate(segs, outer, "ArrowRight");
-        }
-        expect(outer).toBe(down); // wrapped all the way round
-      }
+      visited.push(key!);
+      expect(navigate(segs, key, "ArrowDown")).toBe(key);
       key = navigate(segs, key, "ArrowRight");
     }
-    expect(reached).toEqual(new Set(segs.map((s) => s.key)));
+    expect(key).toBe("inner:health"); // wrapped
+    expect(visited).toEqual(mainIds.map((id) => `inner:${id}`));
+  });
+
+  it("the panel lists General and all 10 subs; main sector angles are unchanged", () => {
+    const panel = mainPanel(segs, "career")!;
+    expect(panel.rows.map((r) => r.name)).toEqual([
+      "General",
+      ...Array.from({ length: 10 }, (_, i) => `Project ${i}`),
+    ]);
+    expect(panel.rows[0]).toEqual({ id: "career", name: "General", hours: 0.5 });
+    expect(panel.total).toBe(2);
+    segs
+      .filter((s) => s.ring === "inner")
+      .forEach((s, i) => {
+        expect(s.startAngle).toBeCloseTo(i * 45, 9);
+        expect(s.endAngle).toBeCloseTo((i + 1) * 45, 9);
+      });
   });
 });

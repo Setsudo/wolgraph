@@ -32,7 +32,7 @@
 - `lib/date.ts` — local-date helpers (`todayLocal`, `isValidDay`, `addDays`, `formatDayLabel`)
 - `lib/hours.ts` — hour validation, stepper clamping and formatting
 - `lib/wheel/geometry.ts` — pure two-ring wheel layout, SVG paths, hit testing, fill opacity
-- `lib/wheel/model.ts` — day-wheel view model (titles, aria-labels, fill hours), day total, arrow-key navigation
+- `lib/wheel/model.ts` — day-wheel view model (titles, aria-labels, fill hours), hours-panel rows per main (`mainPanel`), day total, arrow-key navigation between mains
 - `lib/data/day.ts` (+ test) — `getDay(date)` (active categories + the day's entries) and day-screen types
 - `supabase/migrations/` — SQL migrations (schema, RLS, seed); add new files, never edit applied ones
 - `supabase/test/auth_stub.sql` — stub `auth` schema and roles so migrations run in PGlite tests
@@ -58,8 +58,8 @@
 - `components/SignOutButton.tsx` — nav sign-out
 - `e2e/smoke.spec.ts` — credential-free smoke tests
 - `components/DayView.tsx` — day screen client: header navigation, optimistic debounced saves, rollback toast
-- `components/Wheel.tsx` — SVG day wheel, single tab stop with arrow-key navigation
-- `components/HourSheet.tsx` — hours stepper: bottom sheet on phones, side panel from 768px
+- `components/Wheel.tsx` — SVG day wheel, single tab stop with arrow-key navigation between mains; outer sub ring is display only
+- `components/HourSheet.tsx` — hours stepper (one row per category for a main with subs): bottom sheet on phones, side panel from 768px
 - `components/useLocalToday.ts` — browser-local today (null during SSR)
 - `app/dev/day-preview/` — dev-only day screen preview with fixtures and a fake save (`?fail=1`, `?subs=1`: 3 and 10 subs, archived sub with hours); 404 in production
 - `supabase/migrations/0002_ratings.sql` — `ratings` table (0-10 per main category per day), main-only trigger, RLS
