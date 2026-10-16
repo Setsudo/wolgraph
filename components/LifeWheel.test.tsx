@@ -1,8 +1,13 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, render, screen } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
+import { ENTER_MS, LEAVE_MS, MOVE_MS, STAGGER_MS } from "@/lib/lifewheel/motion";
 import { LifeWheel, type LifeWheelProps } from "./LifeWheel";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 const EIGHT = [
   "Health",
@@ -190,5 +195,182 @@ describe("LifeWheel", () => {
     const dx = Number(far.getAttribute("cx")) - 300;
     const dy = Number(far.getAttribute("cy")) - 300;
     expect(Math.hypot(dx, dy)).toBeCloseTo(230, 6);
+  });
+
+  it("a null value has no dot and the shape bridges past it", () => {
+    const c = wheel({ values: [8, 5, null, 7, 2, 0, 5, 3] });
+    const dots = all(c, "dot");
+    expect(dots).toHaveLength(7);
+    expect(dots.map((d) => d.getAttribute("data-index"))).toEqual([
+      "0",
+      "1",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+    ]);
+    const d = all(c, "data")[0].getAttribute("d")!;
+    expect(d.match(/[ML]/g)).toHaveLength(7);
+    expect(all(c, "data-outline")[0].getAttribute("d")).toBe(d);
+    // Same vertices as the number-only wheel without sector 2.
+    const full = wheel({ values: [8, 5, 0, 7, 2, 0, 5, 3] });
+    const segs = all(full, "data")[0]
+      .getAttribute("d")!
+      .replace(/ Z$/, "")
+      .split(/ (?=L)/);
+    segs.splice(2, 1);
+    expect(d).toBe(segs.join(" ") + " Z");
+  });
+
+  it("two values draw a line, one value just its dot, none no shape", () => {
+    const two = wheel({ values: [8, null, null, null, 4, null, null, null] });
+    expect(all(two, "dot")).toHaveLength(2);
+    expect(all(two, "data-outline")[0].getAttribute("d")).not.toContain("Z");
+    cleanup();
+    const one = wheel({ values: [null, null, 6, null, null, null, null, null] });
+    expect(all(one, "dot")).toHaveLength(1);
+    expect(all(one, "data")).toHaveLength(0);
+    expect(all(one, "data-outline")).toHaveLength(0);
+    cleanup();
+    const none = wheel({ values: Array(8).fill(null) });
+    expect(all(none, "dot")).toHaveLength(0);
+    expect(all(none, "data")).toHaveLength(0);
+    expect(all(none, "spoke")).toHaveLength(8);
+  });
+
+  it("server render draws the final state", () => {
+    const html = renderToString(
+      <LifeWheel
+        labels={EIGHT}
+        values={[10, 5, null, 7, 2, 0, 5, 3]}
+        max={10}
+        rings={[10]}
+        ringLabel={String}
+        ariaLabel="Life wheel"
+      />,
+    );
+    expect(html.match(/data-part="dot"/g)).toHaveLength(7);
+    expect(html).not.toContain("scale(");
+    // Sector 0 at 10/10: on the boundary at 22.5°.
+    const x = 300 + 230 * Math.sin((22.5 * Math.PI) / 180);
+    expect(html).toContain(`cx="${x}"`);
+  });
+
+  describe("motion", () => {
+    let now = 0;
+    let queue: { id: number; cb: FrameRequestCallback }[] = [];
+
+    function browser(reduce: boolean) {
+      now = 0;
+      queue = [];
+      let next = 1;
+      vi.stubGlobal("matchMedia", (q: string) => ({
+        matches: reduce && q.includes("reduce"),
+        media: q,
+        addEventListener() {},
+        removeEventListener() {},
+      }));
+      vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+        const id = next++;
+        queue.push({ id, cb });
+        return id;
+      });
+      vi.stubGlobal("cancelAnimationFrame", (id: number) => {
+        queue = queue.filter((f) => f.id !== id);
+      });
+      vi.spyOn(performance, "now").mockImplementation(() => now);
+    }
+
+    /** Advances the clock and runs one frame. */
+    function frame(t: number) {
+      now = t;
+      const run = queue;
+      queue = [];
+      act(() => run.forEach((f) => f.cb(t)));
+    }
+
+    const dist = (d: Element) =>
+      Math.hypot(Number(d.getAttribute("cx")) - 300, Number(d.getAttribute("cy")) - 300);
+    const scaleOf = (d: Element) => {
+      const m = d.getAttribute("transform")?.match(/scale\(([^)]+)\)/);
+      return m ? Number(m[1]) : 1;
+    };
+
+    afterEach(() => vi.restoreAllMocks());
+
+    it("reduced motion renders the final state with no frames requested", () => {
+      browser(true);
+      const c = wheel({ values: [10, 5, null, 7, 2, 0, 5, 3] });
+      expect(queue).toHaveLength(0);
+      const dots = all(c, "dot");
+      expect(dots).toHaveLength(7);
+      expect(dist(dots[0])).toBeCloseTo(230, 6);
+      for (const d of dots) expect(d.getAttribute("transform")).toBeNull();
+    });
+
+    it("pops points in from the centre on mount, staggered, then settles", () => {
+      browser(false);
+      const c = wheel({ values: [10, 10, 10, 10, 10, 10, 10, 10] });
+      frame(0);
+      let dots = all(c, "dot");
+      for (const d of dots) {
+        expect(dist(d)).toBeCloseTo(0, 6);
+        expect(scaleOf(d)).toBe(0);
+      }
+      frame(STAGGER_MS + 100);
+      dots = all(c, "dot");
+      expect(dist(dots[0])).toBeGreaterThan(dist(dots[1]));
+      expect(dist(dots[1])).toBeGreaterThan(0);
+      expect(dist(dots[7])).toBe(0);
+      // Sector 0's dot at its overshoot peak.
+      frame(0.6 * ENTER_MS);
+      expect(scaleOf(all(c, "dot")[0])).toBeCloseTo(1.15, 2);
+      frame(7 * STAGGER_MS + ENTER_MS);
+      dots = all(c, "dot");
+      for (const d of dots) {
+        expect(dist(d)).toBeCloseTo(230, 6);
+        expect(d.getAttribute("transform")).toBeNull();
+      }
+      expect(queue).toHaveLength(0);
+    });
+
+    it("glides on a value change and retracts a value that goes null", () => {
+      browser(false);
+      const props: LifeWheelProps = {
+        labels: EIGHT,
+        values: [10, 10, 10, 10, 10, 10, 10, 10],
+        max: 10,
+        rings: [10],
+        ringLabel: String,
+        ariaLabel: "Life wheel",
+      };
+      const { container: c, rerender } = render(<LifeWheel {...props} />);
+      frame(0);
+      frame(2000);
+      expect(queue).toHaveLength(0);
+
+      now = 3000;
+      rerender(<LifeWheel {...props} values={[5, 10, 10, 10, 10, 10, 10, 10]} />);
+      frame(3000);
+      expect(dist(all(c, "dot")[0])).toBeCloseTo(230, 6);
+      frame(3000 + MOVE_MS / 2);
+      const mid = dist(all(c, "dot")[0]);
+      expect(mid).toBeLessThan(230);
+      expect(mid).toBeGreaterThan(115);
+      frame(3000 + MOVE_MS);
+      expect(dist(all(c, "dot")[0])).toBeCloseTo(115, 6);
+
+      now = 4000;
+      rerender(<LifeWheel {...props} values={[5, null, 10, 10, 10, 10, 10, 10]} />);
+      frame(4000);
+      expect(all(c, "dot")).toHaveLength(8);
+      frame(4000 + LEAVE_MS / 2);
+      const leaving = all(c, "dot")[1];
+      expect(scaleOf(leaving)).toBeLessThan(1);
+      frame(4000 + LEAVE_MS);
+      expect(all(c, "dot")).toHaveLength(7);
+      expect(all(c, "data")[0].getAttribute("d")!.match(/[ML]/g)).toHaveLength(7);
+    });
   });
 });

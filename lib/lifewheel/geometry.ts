@@ -173,3 +173,78 @@ export function fitLabels(
     return fit(i, shared, maxWidth);
   });
 }
+
+/** A plotted vertex: its sector index and position. */
+export type SectorPoint = Point & { index: number };
+
+/**
+ * Radius of each value on a 0..max scale (clamped like `points`); null means
+ * no value and stays null.
+ */
+export function valueRadii(
+  values: (number | null)[],
+  max: number,
+  radius: number,
+): (number | null)[] {
+  return values.map((v) => (v === null ? null : max > 0 ? (radius * clampValue(v, max)) / max : 0));
+}
+
+/**
+ * Vertices of the non-null radii at their sector centres, in sector order
+ * (n = radii.length). A null sector is skipped, so the shape bridges straight
+ * from the previous valued vertex to the next.
+ */
+export function valuedPoints(
+  radii: (number | null)[],
+  size: number = LIFEWHEEL_SIZE,
+): SectorPoint[] {
+  const centres = sectorCentres(radii.length);
+  const out: SectorPoint[] = [];
+  radii.forEach((r, i) => {
+    if (r !== null) out.push({ index: i, ...polarToXY(r, centres[i], size) });
+  });
+  return out;
+}
+
+function fmt(n: number): string {
+  const v = Math.round(n * 100) / 100;
+  return String(Object.is(v, -0) ? 0 : v);
+}
+
+/**
+ * Path through the valued vertices: "" for fewer than 2 (a lone value is just
+ * its dot), an open line for 2, and a closed polygon (as polygonPath) for 3+.
+ */
+export function valuedPath(pts: Point[]): string {
+  if (pts.length < 2) return "";
+  const [first, ...rest] = pts;
+  const lines = rest.map((p) => ` L ${fmt(p.x)} ${fmt(p.y)}`).join("");
+  return `M ${fmt(first.x)} ${fmt(first.y)}${lines}${pts.length > 2 ? " Z" : ""}`;
+}
+
+/**
+ * Radius at which the straight bridge from a to b crosses the ray from the
+ * centre at `angle`: where a vertex on that ray sits flush with the bridge.
+ * 0 when the bridge does not cross the ray on its positive side (it passes on
+ * the far side of the centre, or runs parallel to the ray).
+ */
+export function bridgeRadius(
+  a: Point,
+  b: Point,
+  angle: number,
+  size: number = LIFEWHEEL_SIZE,
+): number {
+  const c = size / 2;
+  const rad = (angle * Math.PI) / 180;
+  const d = { x: Math.sin(rad), y: -Math.cos(rad) };
+  const e = { x: b.x - a.x, y: b.y - a.y };
+  const cross = (u: Point, v: Point) => u.x * v.y - u.y * v.x;
+  const denom = cross(d, e);
+  if (Math.abs(denom) < 1e-9) return 0;
+  const w = { x: a.x - c, y: a.y - c };
+  // centre + r d = a + s e  =>  r = cross(w, e) / cross(d, e), s = cross(w, d) / cross(d, e)
+  const r = cross(w, e) / denom;
+  const s = cross(w, d) / denom;
+  if (!(r > 0) || s < -1e-9 || s > 1 + 1e-9) return 0;
+  return r;
+}

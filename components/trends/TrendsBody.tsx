@@ -88,21 +88,24 @@ function AverageWheel({ mains }: { mains: TrendMain[] }) {
   );
 }
 
-/** Average 0-10 rating, same sectors and colours; unrated mains sit at the centre. */
+/** Average 0-10 rating, same sectors and colours; unrated mains are left out of the shape. */
 function RatingWheel({ mains }: { mains: TrendMain[] }) {
   return (
     <LifeWheel
       labels={wheelLabels(mains)}
       italic={mains.map((m) => m.archived)}
       colors={mains.map((m) => m.color)}
-      values={mains.map((m) => m.averageRating ?? 0)}
+      values={mains.map((m) => m.averageRating)}
       max={RATING_MAX}
       rings={RATING_RINGS}
       ringLabel={(v) => `${v}`}
       ariaLabel={
         "Average rating out of 10: " +
         mains
-          .map((m) => `${m.name} ${m.averageRating === null ? "n/a" : m.averageRating.toFixed(1)}`)
+          .map(
+            (m) =>
+              `${m.name} ${m.averageRating === null ? "not rated" : m.averageRating.toFixed(1)}`,
+          )
           .join(", ")
       }
     />

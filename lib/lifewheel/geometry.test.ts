@@ -16,7 +16,12 @@ import {
   ringRadii,
   sectorCentres,
   spokeAngles,
+  bridgeRadius,
+  valuedPath,
+  valuedPoints,
+  valueRadii,
 } from "./geometry";
+import { polygonPath } from "@/lib/radar/geometry";
 
 const C = SIZE / 2;
 const dist = (p: { x: number; y: number }) => Math.hypot(p.x - C, p.y - C);
@@ -240,5 +245,96 @@ describe("fitLabels", () => {
       expect(fits[0].text.endsWith("…")).toBe(true);
       expect((width(fits[0]) + width(fits[1])) / 2).toBeLessThanOrEqual(60 - LABEL_GAP + 1e-9);
     });
+  });
+});
+
+describe("valueRadii", () => {
+  it("scales like points, keeps 0 at the centre and null as null", () => {
+    expect(valueRadii([10, 5, 0, null, 15, -1], 10, R)).toEqual([R, R / 2, 0, null, R, 0]);
+    expect(valueRadii([3, null], 0, R)).toEqual([0, null]);
+  });
+});
+
+describe("valuedPoints and valuedPath", () => {
+  const radiiOf = (values: (number | null)[]) => valueRadii(values, 10, R);
+
+  it("number-only values give the same points and path as before", () => {
+    const values = [8, 5, 9, 7, 2, 0, 5, 3];
+    const pts = valuedPoints(radiiOf(values));
+    expect(pts.map((p) => p.index)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+    expect(pts.map(({ x, y }) => ({ x, y }))).toEqual(points(values, 10, R));
+    expect(valuedPath(pts)).toBe(polygonPath(points(values, 10, R)));
+  });
+
+  it("skips null sectors, keeping the others at their own sector centres", () => {
+    const pts = valuedPoints(radiiOf([10, null, 10, null]));
+    expect(pts.map((p) => p.index)).toEqual([0, 2]);
+    expect(angleOf(pts[0])).toBeCloseTo(45, 9);
+    expect(angleOf(pts[1])).toBeCloseTo(225, 9);
+  });
+
+  it("bridges straight from the previous valued vertex to the next: no notch to the centre", () => {
+    const values = [8, 5, null, 7, 2, 6, 5, 3];
+    const pts = valuedPoints(radiiOf(values));
+    expect(pts).toHaveLength(7);
+    const all = points(
+      values.map((v) => v ?? 0),
+      10,
+      R,
+    );
+    const d = valuedPath(pts);
+    // Vertex 1 is followed directly by vertex 3; the centre never appears.
+    expect(d).toBe(polygonPath([all[0], all[1], all[3], all[4], all[5], all[6], all[7]]));
+    expect(d).not.toContain("300 300");
+  });
+
+  it("all null: no points, no path", () => {
+    expect(valuedPoints(radiiOf([null, null, null]))).toEqual([]);
+    expect(valuedPath([])).toBe("");
+  });
+
+  it("one value: its point, no path (just the dot)", () => {
+    const pts = valuedPoints(radiiOf([null, 7, null]));
+    expect(pts).toHaveLength(1);
+    expect(valuedPath(pts)).toBe("");
+  });
+
+  it("two values: an open line between them", () => {
+    const pts = valuedPoints(radiiOf([10, null, 10, null]));
+    // 45° and 225° at R: opposite ends of a diameter.
+    const d = valuedPath(pts);
+    expect(d).toMatch(/^M \S+ \S+ L \S+ \S+$/);
+    expect(d).not.toContain("Z");
+  });
+
+  it("three values: a closed polygon", () => {
+    expect(valuedPath(valuedPoints(radiiOf([1, null, 2, 3])))).toMatch(/ Z$/);
+  });
+
+  it("a 0 value is a vertex at the centre (only null is skipped)", () => {
+    const pts = valuedPoints(radiiOf([5, 0, 5]));
+    expect(pts).toHaveLength(3);
+    expect(dist(pts[1])).toBeCloseTo(0, 9);
+  });
+});
+
+describe("bridgeRadius", () => {
+  it("is where the chord between neighbours crosses the sector's ray", () => {
+    // Neighbours at 0° and 90°, both at R: the chord crosses 45° at R cos 45°.
+    const a = { x: C, y: C - R };
+    const b = { x: C + R, y: C };
+    expect(bridgeRadius(a, b, 45)).toBeCloseTo(R * Math.SQRT1_2, 9);
+    // Unequal neighbours: still on the straight line between them.
+    const r = bridgeRadius(a, { x: C + R / 2, y: C }, 45);
+    const p = { x: C + r * Math.SQRT1_2, y: C - r * Math.SQRT1_2 };
+    const cross = (p.x - a.x) * (C - a.y) - (p.y - a.y) * (C + R / 2 - a.x);
+    expect(Math.abs(cross)).toBeLessThan(1e-6);
+  });
+
+  it("is 0 when the chord passes on the far side of the centre or is parallel", () => {
+    // Neighbours at 0° and 90°; the ray at 225° points away from the chord.
+    expect(bridgeRadius({ x: C, y: C - R }, { x: C + R, y: C }, 225)).toBe(0);
+    // Chord along the 0° ray itself.
+    expect(bridgeRadius({ x: C, y: C - 10 }, { x: C, y: C - R }, 0)).toBe(0);
   });
 });

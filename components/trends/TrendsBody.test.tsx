@@ -101,13 +101,13 @@ describe("TrendsBody", () => {
     expect(RATING_HEADING).toBe("Rating · avg score 0-10");
   });
 
-  it("draws the rating wheel on 0-10 with the same sectors and colours, unrated at the centre", () => {
+  it("draws the rating wheel on 0-10 with the same sectors and colours, unrated left out", () => {
     const { container } = render(<TrendsBody aggregate={aggregate(RATED)} />);
     const wheels = screen.getAllByRole("img");
     expect(wheels).toHaveLength(2);
     const [time, rating] = wheels;
     expect(rating.getAttribute("aria-label")).toBe(
-      "Average rating out of 10: Health 7.5, Career 5.0, Family n/a, Old 8.3",
+      "Average rating out of 10: Health 7.5, Career 5.0, Family not rated, Old 8.3",
     );
     const inWheel = (svg: Element, part: string) => [
       ...svg.querySelectorAll(`[data-part="${part}"]`),
@@ -123,14 +123,30 @@ describe("TrendsBody", () => {
       inWheel(time, "label").map((l) => l.textContent),
     );
     const fills = (svg: Element) => inWheel(svg, "dot").map((d) => d.getAttribute("fill"));
-    expect(fills(rating)).toEqual(["#2F8C8C", "#C8553D", "#C9831F", "#7A5BA8"]);
-    expect(fills(time)).toEqual(fills(rating));
-    // Family (null) sits on the centre of the wheel.
-    const family = inWheel(rating, "dot")[2];
-    const boundary = inWheel(rating, "boundary")[0];
-    expect(family.getAttribute("cx")).toBe(boundary.getAttribute("cx"));
-    expect(family.getAttribute("cy")).toBe(boundary.getAttribute("cy"));
+    expect(fills(time)).toEqual(["#2F8C8C", "#C8553D", "#C9831F", "#7A5BA8"]);
+    // Family (null) has no dot and no vertex: the shape bridges Career -> Old.
+    expect(fills(rating)).toEqual(["#2F8C8C", "#C8553D", "#7A5BA8"]);
+    expect(inWheel(rating, "dot").map((d) => d.getAttribute("data-index"))).toEqual([
+      "0",
+      "1",
+      "3",
+    ]);
+    const d = inWheel(rating, "data")[0].getAttribute("d")!;
+    expect(d.match(/[ML]/g)).toHaveLength(3);
+    expect(d).not.toContain("300 300");
     expect(parts(container, "spoke")).toHaveLength(8);
+  });
+
+  it("keeps a 0 average on the hours wheel at the centre", () => {
+    const { container } = render(
+      <TrendsBody aggregate={aggregate([...RATED.slice(0, 3), main("Zero", 0, false, 4)])} />,
+    );
+    const [time] = screen.getAllByRole("img");
+    const dots = [...time.querySelectorAll('[data-part="dot"]')];
+    expect(dots).toHaveLength(4);
+    expect(dots[3].getAttribute("cx")).toBe("300");
+    expect(dots[3].getAttribute("cy")).toBe("300");
+    expect(parts(container, "dot")).toHaveLength(7);
   });
 
   it("shows the rating empty state in place of the wheel when the period has no ratings", () => {

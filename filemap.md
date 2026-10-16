@@ -43,11 +43,13 @@
 - `lib/data/categories.ts` (+ test) — server category data access: `listCategories` and mutations (RLS, error mapping)
 - `lib/data/aggregates.ts` — per-period totals and per-day averages per main category
 - `lib/radar/geometry.ts` — trend scale helpers (`scaleMax`, `ringSteps`) and `polygonPath`
-- `lib/lifewheel/geometry.ts` — pure life-wheel geometry: sector spokes and centres, value points, ring radii, label arcs
+- `lib/lifewheel/geometry.ts` — pure life-wheel geometry: sector spokes and centres, value points (null values skipped, `valuedPath`, `bridgeRadius`), ring radii, label arcs
+- `lib/lifewheel/motion.ts` (+ test) — pure point motion for the life wheel: pop-in, glide, retract-to-bridge tracks and easing
 - `lib/data/ratingAggregates.ts` (+ test) — `withRatings`: per-main average 0-10 rating for a period on top of the hours aggregate, `ratingsEmpty`, `ratingsAvailable`
 - `lib/data/trends.ts` (+ test) — `getTrendData(period)`: server-side load of categories and period entries and ratings, aggregated (missing ratings table: `ratingsAvailable: false`)
 - `lib/trends/format.ts` — trends period labels, hour formatting, `?kind&anchor` parsing and hrefs
-- `components/LifeWheel.tsx` — generic reference-style wheel chart (labels, values on 0..max, rings, optional category-coloured dots); used by Trends and Rate
+- `components/LifeWheel.tsx` — generic reference-style wheel chart (labels, values on 0..max or null, rings, optional category-coloured dots); server-safe, used by Trends and Rate
+- `components/LifeWheelPlot.tsx` — client SVG shell of LifeWheel: animates the value shape and dots with rAF (final state on the server and with reduced motion)
 - `components/trends/` — trends screen: `TrendsView` (shared tree), `PeriodControls` (client toggle and arrows), `TrendsBody` (Time and Rating wheels), `TotalsTable` (incl. avg rating), `CanonicalizeTrendsUrl` (client redirect to today)
 - `app/dev/trends-preview/` — dev-only trends preview with fixture hours and ratings (`?kind&anchor&empty=1&few=1&subs=1`); 404 in production
 - `proxy.ts` — Next 16 proxy (middleware): session refresh and route protection
