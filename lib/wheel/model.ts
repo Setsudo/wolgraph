@@ -155,7 +155,9 @@ export function buildWheel(
       ariaLabel: sub
         ? `${main.name}, ${sub.name}, ${formatHours(editHours)} hours`
         : `${main.name}, ${formatHours(fillHours)} hours` +
-          (subs.length > 0 ? `, ${subs.length} subcategories` : ""),
+          (subs.length > 0
+            ? `, ${subs.length} ${subs.length === 1 ? "subcategory" : "subcategories"}`
+            : ""),
     };
   });
 }
