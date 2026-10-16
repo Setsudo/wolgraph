@@ -19,7 +19,8 @@ async function Preview({ searchParams }: { searchParams: SearchParams }) {
       <CanonicalizeTrendsUrl basePath={BASE} kind={parseKind(raw)} anchor={parseAnchor(raw)} />
     );
   }
-  const variant: PreviewVariant = raw.empty === "1" ? "empty" : raw.few === "1" ? "few" : "full";
+  const variant: PreviewVariant =
+    raw.empty === "1" ? "empty" : raw.few === "1" ? "few" : raw.subs === "1" ? "subs" : "full";
   const period = periodFor(params.kind, params.anchor);
   const aggregate = withRatings(
     aggregatePeriod(previewCategories(variant), previewEntries(variant, params.anchor), period),
@@ -28,7 +29,7 @@ async function Preview({ searchParams }: { searchParams: SearchParams }) {
   return <TrendsView aggregate={aggregate} anchor={params.anchor} basePath={BASE} />;
 }
 
-/** Dev-only: the trends screen with fixture data (?kind, ?anchor, ?empty=1, ?few=1). */
+/** Dev-only: the trends screen with fixture data (?kind, ?anchor, ?empty=1, ?few=1, ?subs=1). */
 export default function TrendsPreviewPage({ searchParams }: { searchParams: SearchParams }) {
   if (process.env.NODE_ENV === "production") notFound();
   return (

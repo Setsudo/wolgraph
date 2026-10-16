@@ -1,6 +1,6 @@
 /**
  * Dev-only fixture data for the trends preview: the 8 seeded mains (SPEC §7),
- * a few subcategories, one archived main with hours, and a week of entries
+ * a few subcategories (`subs`: crowded ones), one archived main with hours, and a week of entries
  * and 0-10 ratings for the Monday–Sunday week containing the anchor (some days
  * unrated; Spirituality never rated, so it shows as n/a).
  */
@@ -50,6 +50,31 @@ const SUBS: CategoryRow[] = [
   cat("career-meetings", "Meetings", "#C8553D", 1, { parent: "career" }),
 ];
 
+/**
+ * `?subs=1`: Health with 3 subs, Career with 10 (the charter maximum) and an
+ * archived sub (Side project) that still has hours this week.
+ */
+const CAREER_SUB_NAMES = [
+  "Deep work",
+  "Meetings",
+  "Email",
+  "Planning",
+  "Hiring",
+  "Mentoring",
+  "Writing",
+  "Reviews",
+  "Admin",
+  "Learning",
+];
+const MANY_SUBS: CategoryRow[] = [
+  ...SUBS.filter((c) => c.parent_id !== "career"),
+  cat("health-meditation", "Meditation", "#2F8C8C", 2, { parent: "health" }),
+  ...CAREER_SUB_NAMES.map((name, i) =>
+    cat(`career-${i}`, name, "#C8553D", i, { parent: "career" }),
+  ),
+  cat("career-side", "Side project", "#C8553D", 10, { parent: "career", archived: true }),
+];
+
 /** Hours per category id for each weekday, Monday first. */
 const WEEK: Record<string, number[]> = {
   "health-exercise": [1, 0.5, 1, 0, 1, 1.5, 1],
@@ -65,6 +90,20 @@ const WEEK: Record<string, number[]> = {
   hobbies: [0, 0.5, 0, 1, 0, 1.5, 0],
 };
 
+/** Extra hours for the `subs` variant's subcategories (Career's are split over 10 subs). */
+const WEEK_SUBS: Record<string, number[]> = {
+  "health-meditation": [0.25, 0.25, 0.5, 0, 0.25, 0.5, 0.5],
+  "career-0": [3, 3.5, 2.5, 3, 2, 0, 0],
+  "career-1": [1.5, 1, 2, 1.5, 1, 0, 0],
+  "career-2": [0.5, 0.5, 0.5, 0.5, 0.5, 0, 0],
+  "career-3": [0.5, 0, 0.5, 0, 0.5, 0, 0],
+  "career-4": [0, 1, 0, 0, 0, 0, 0],
+  "career-6": [0, 0, 0.5, 1, 0, 0, 0],
+  "career-7": [0.5, 0.5, 0, 0.5, 0.5, 0, 0],
+  "career-9": [0, 0, 0, 0, 0, 1, 0],
+  "career-side": [0, 0, 1, 0, 0, 2, 1.5], // archived sub: still rolls into Career
+};
+
 /** Score per main category id for each weekday, Monday first; null = unrated. */
 const RATINGS: Record<string, (number | null)[]> = {
   health: [7, 6, null, 7, 8, 8, null],
@@ -77,13 +116,14 @@ const RATINGS: Record<string, (number | null)[]> = {
   hobbies: [null, 6, null, 7, null, 8, null],
 };
 
-export type PreviewVariant = "full" | "empty" | "few";
+export type PreviewVariant = "full" | "empty" | "few" | "subs";
 
 export function previewCategories(variant: PreviewVariant): CategoryRow[] {
   if (variant === "few") {
     const keep = new Set(["health", "career"]);
     return [...MAINS, ...SUBS].filter((c) => keep.has(c.parent_id ?? c.id));
   }
+  if (variant === "subs") return [...MAINS, ...MANY_SUBS];
   return [...MAINS, ...SUBS];
 }
 
@@ -91,7 +131,8 @@ export function previewEntries(variant: PreviewVariant, anchor: string): EntryRo
   if (variant === "empty") return [];
   const ids = new Set(previewCategories(variant).map((c) => c.id));
   const days = eachDay(periodFor("week", anchor));
-  return Object.entries(WEEK).flatMap(([category_id, hours]) =>
+  const week = variant === "subs" ? { ...WEEK, ...WEEK_SUBS } : WEEK;
+  return Object.entries(week).flatMap(([category_id, hours]) =>
     ids.has(category_id)
       ? days.flatMap((day, i) =>
           hours[i] > 0

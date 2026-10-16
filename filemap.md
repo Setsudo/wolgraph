@@ -24,7 +24,7 @@
 - `app/(app)/categories/CategoriesScreen.tsx` — client UI: add/rename/archive, Archived section, undo toast
 - `app/(app)/categories/actions.ts` — category Server Actions (revalidate `/categories` and `/day`)
 - `app/(app)/categories/CategoriesScreen.test.tsx` — component tests (validation, palette default, archive/restore)
-- `app/dev/categories-preview/` — dev-only preview of the Categories screen with fixtures and fake actions (404 in production)
+- `app/dev/categories-preview/` — dev-only preview of the Categories screen with fixtures and fake actions (`?subs=1`: 3 and 10 subs, archived sub); 404 in production
 - `lib/date.ts` — local-date helpers (`todayLocal`)
 - `app/(app)/day/[date]/page.tsx` — daily entry screen (validates the date, loads the day, renders `DayView`)
 - `app/(app)/day/[date]/actions.ts` (+ test) — `saveEntry` Server Action (future-day guard, upsert or delete at 0 h, revalidates the day path)
@@ -33,14 +33,14 @@
 - `lib/hours.ts` — hour validation, stepper clamping and formatting
 - `lib/wheel/geometry.ts` — pure two-ring wheel layout, SVG paths, hit testing, fill opacity
 - `lib/wheel/model.ts` — day-wheel view model (titles, aria-labels, fill hours), day total, arrow-key navigation
-- `lib/data/day.ts` — `getDay(date)` (active categories + the day's entries) and day-screen types
+- `lib/data/day.ts` (+ test) — `getDay(date)` (active categories + the day's entries) and day-screen types
 - `supabase/migrations/` — SQL migrations (schema, RLS, seed); add new files, never edit applied ones
 - `supabase/test/auth_stub.sql` — stub `auth` schema and roles so migrations run in PGlite tests
 - `lib/data/types.ts` — `Database` and row types matching the migrations
 - `lib/data/schema.test.ts` — schema, constraint and RLS tests (PGlite)
 - `lib/data/period.ts` — week/month period math on YYYY-MM-DD strings (UTC-safe)
 - `lib/data/categoryRules.ts` — pure category rules: palette, name validation, default color, sort order, action types
-- `lib/data/categories.ts` — server category data access: `listCategories` and mutations (RLS, error mapping)
+- `lib/data/categories.ts` (+ test) — server category data access: `listCategories` and mutations (RLS, error mapping)
 - `lib/data/aggregates.ts` — per-period totals and per-day averages per main category
 - `lib/radar/geometry.ts` — trend scale helpers (`scaleMax`, `ringSteps`) and `polygonPath`
 - `lib/lifewheel/geometry.ts` — pure life-wheel geometry: sector spokes and centres, value points, ring radii, label arcs
@@ -49,7 +49,7 @@
 - `lib/trends/format.ts` — trends period labels, hour formatting, `?kind&anchor` parsing and hrefs
 - `components/LifeWheel.tsx` — generic reference-style wheel chart (labels, values on 0..max, rings, optional category-coloured dots); used by Trends and Rate
 - `components/trends/` — trends screen: `TrendsView` (shared tree), `PeriodControls` (client toggle and arrows), `TrendsBody` (Time and Rating wheels), `TotalsTable` (incl. avg rating), `CanonicalizeTrendsUrl` (client redirect to today)
-- `app/dev/trends-preview/` — dev-only trends preview with fixture hours and ratings (`?kind&anchor&empty=1&few=1`); 404 in production
+- `app/dev/trends-preview/` — dev-only trends preview with fixture hours and ratings (`?kind&anchor&empty=1&few=1&subs=1`); 404 in production
 - `proxy.ts` — Next 16 proxy (middleware): session refresh and route protection
 - `lib/supabase/` — `env.ts`, server/browser clients, `proxy.ts` session refresh
 - `lib/auth/routing.ts` — pure redirect rules and `next` sanitizer
@@ -61,7 +61,7 @@
 - `components/Wheel.tsx` — SVG day wheel, single tab stop with arrow-key navigation
 - `components/HourSheet.tsx` — hours stepper: bottom sheet on phones, side panel from 768px
 - `components/useLocalToday.ts` — browser-local today (null during SSR)
-- `app/dev/day-preview/` — dev-only day screen preview with fixtures and a fake save (`?fail=1`); 404 in production
+- `app/dev/day-preview/` — dev-only day screen preview with fixtures and a fake save (`?fail=1`, `?subs=1`: 3 and 10 subs, archived sub with hours); 404 in production
 - `supabase/migrations/0002_ratings.sql` — `ratings` table (0-10 per main category per day), main-only trigger, RLS
 - `app/(app)/rate/page.tsx` — Rate your life screen (home): reads `?day` (browser-local today or an earlier day), loads ratings, renders `RateView`
 - `app/(app)/rate/actions.ts` (+ test) — `saveRating` Server Action (0-10 integer, future-day guard, upsert, revalidates `/rate`)
