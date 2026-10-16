@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DayCategory } from "@/lib/data/day";
-import { buildWheel, dayTotal, fitLabel, navigate } from "./model";
+import { archivedSubParents, buildWheel, dayTotal, fitLabel, navigate } from "./model";
 
 const cats: DayCategory[] = [
   { id: "health", parentId: null, name: "Health", color: "#2F8C8C" },
@@ -55,6 +55,63 @@ describe("buildWheel", () => {
     expect(s.ariaLabel).toBe("Family, general, 2 hours");
     expect(byKey["outer:family"]).toBeUndefined();
     expect(byKey["inner:career"].ariaLabel).toBe("Career, general, 0 hours");
+  });
+});
+
+describe("archived subcategory hours", () => {
+  const entries = [
+    { categoryId: "health", hours: 0.5, parentId: null },
+    { categoryId: "sleep", hours: 7.5, parentId: "health" },
+    { categoryId: "old-health", hours: 1, parentId: "health" }, // archived sub of a main with subs
+    { categoryId: "old-family", hours: 1.5, parentId: "family" }, // archived sub of a subless main
+    { categoryId: "old-family-2", hours: 0.25, parentId: "family" },
+    { categoryId: "old-main", hours: 3, parentId: null }, // archived main
+    { categoryId: "orphan", hours: 2, parentId: "gone" }, // sub of an archived main
+    { categoryId: "family", hours: 2 }, // no parent info (e.g. fixtures)
+  ];
+  const archived = archivedSubParents(cats, entries);
+  const h = Object.fromEntries(entries.map((e) => [e.categoryId, e.hours]));
+  const segs = buildWheel(cats, h, archived);
+  const byKey = Object.fromEntries(segs.map((s) => [s.key, s]));
+
+  it("maps only inactive categories with a parent to their main", () => {
+    expect(archived).toEqual({
+      "old-health": "health",
+      "old-family": "family",
+      "old-family-2": "family",
+      orphan: "gone",
+    });
+  });
+
+  it("archived subs get no segment", () => {
+    expect(segs.map((s) => s.key)).toEqual([
+      "inner:health",
+      "inner:family",
+      "inner:career",
+      "outer:sleep",
+      "outer:exercise",
+    ]);
+  });
+
+  it("a main with active subs fills with own + active subs + archived subs; edits only its own", () => {
+    const s = byKey["inner:health"];
+    expect(s.fillHours).toBe(9); // 0.5 own + 7.5 sleep + 1 archived
+    expect(s.editHours).toBe(0.5);
+    expect(s.ariaLabel).toBe("Health, general, 0.5 hours");
+    expect(byKey["outer:sleep"].fillHours).toBe(7.5);
+    expect(byKey["outer:exercise"].fillHours).toBe(0);
+  });
+
+  it("a subless main fills and reads out own + archived subs; edits only its own", () => {
+    const s = byKey["inner:family"];
+    expect(s.fillHours).toBe(3.75);
+    expect(s.editHours).toBe(2);
+    expect(s.ariaLabel).toBe("Family, general, 3.75 hours");
+    expect(byKey["inner:career"].fillHours).toBe(0);
+  });
+
+  it("leaves the day total unchanged", () => {
+    expect(dayTotal(h)).toBe(17.75);
   });
 });
 

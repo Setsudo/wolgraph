@@ -41,7 +41,8 @@ const CAREER_SUBS = [
 /**
  * `?subs=1`: the eight mains with Health split into 3 subs and Career into 10
  * (the charter maximum). Career's archived "Side project" is not listed (archived
- * categories leave the wheel) but has hours in SUB_PREVIEW_ENTRIES.
+ * categories leave the wheel) but has hours in SUB_PREVIEW_ENTRIES, which fill Career's inner
+ * segment.
  */
 export const SUB_PREVIEW_CATEGORIES: DayCategory[] = [
   ...PREVIEW_CATEGORIES.filter((c) => c.parentId === null),
@@ -68,7 +69,8 @@ export const SUB_PREVIEW_ENTRIES: DayEntry[] = [
   { categoryId: "career-meetings", hours: 1.5 },
   { categoryId: "career-email", hours: 0.75 },
   { categoryId: "career-reviews", hours: 1 },
-  { categoryId: "career-side-project", hours: 1.5 }, // archived sub: counts in the total only
+  // Archived sub: no segment, but counts in Career's fill and the day total.
+  { categoryId: "career-side-project", hours: 1.5, parentId: "career" },
   { categoryId: "family", hours: 2 },
   { categoryId: "relaxation", hours: 1 },
 ];

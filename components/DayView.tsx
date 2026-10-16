@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DayCategory, DayEntry, SaveEntry } from "@/lib/data/day";
 import { addDays, formatDayLabel, isValidDay } from "@/lib/date";
-import { buildWheel, dayTotal } from "@/lib/wheel/model";
+import { archivedSubParents, buildWheel, dayTotal } from "@/lib/wheel/model";
 import { HourSheet, type SaveStatus } from "./HourSheet";
 import { useLocalToday } from "./useLocalToday";
 import { Wheel } from "./Wheel";
@@ -68,7 +68,14 @@ export function DayView({ date, categories, entries, save, onNavigate }: DayView
   const sheetRef = useRef<HTMLElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
-  const segments = useMemo(() => buildWheel(categories, hours), [categories, hours]);
+  const archivedParents = useMemo(
+    () => archivedSubParents(categories, entries),
+    [categories, entries],
+  );
+  const segments = useMemo(
+    () => buildWheel(categories, hours, archivedParents),
+    [categories, hours, archivedParents],
+  );
   const selected = segments.find((s) => s.key === selectedKey) ?? null;
 
   useEffect(() => {

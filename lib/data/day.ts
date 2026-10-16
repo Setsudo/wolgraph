@@ -9,7 +9,15 @@ export type DayCategory = {
   color: string;
 };
 
-export type DayEntry = { categoryId: string; hours: number };
+export type DayEntry = {
+  categoryId: string;
+  hours: number;
+  /**
+   * The entry's category's main (null for a main). getDay always sets it; the wheel uses it
+   * to count archived subcategories' hours toward their main's fill.
+   */
+  parentId?: string | null;
+};
 
 export type DayData = {
   /** Active mains and subs, ordered by sort_order then name. */
@@ -38,7 +46,11 @@ export async function getDay(day: string): Promise<DayData> {
       .is("archived_at", null)
       .order("sort_order", { ascending: true })
       .order("name", { ascending: true }),
-    supabase.from("entries").select("category_id, hours").eq("user_id", userId).eq("day", day),
+    supabase
+      .from("entries")
+      .select("category_id, hours, category:categories!entries_category_id_fkey(parent_id)")
+      .eq("user_id", userId)
+      .eq("day", day),
   ]);
   if (categories.error) throw new Error(`Could not load categories: ${categories.error.message}`);
   if (entries.error) throw new Error(`Could not load entries: ${entries.error.message}`);
@@ -50,6 +62,10 @@ export async function getDay(day: string): Promise<DayData> {
       name: c.name,
       color: c.color,
     })),
-    entries: entries.data.map((e) => ({ categoryId: e.category_id, hours: Number(e.hours) })),
+    entries: entries.data.map((e) => ({
+      categoryId: e.category_id,
+      hours: Number(e.hours),
+      parentId: e.category?.parent_id ?? null,
+    })),
   };
 }

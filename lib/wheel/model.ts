@@ -2,7 +2,7 @@
  * Day-wheel view model: joins categories and a day's hours onto the geometry
  * from ./geometry, and keyboard navigation between segments. Pure, no React.
  */
-import type { DayCategory } from "@/lib/data/day";
+import type { DayCategory, DayEntry } from "@/lib/data/day";
 import { formatHours } from "@/lib/hours";
 import { layoutWheel, type Segment } from "./geometry";
 
@@ -16,13 +16,17 @@ export type WheelSegment = Segment & {
   editId: string;
   editHours: number;
   /**
-   * Hours driving fill opacity: inner = main own + its subs (a subless main's
-   * full-span segment is just its own hours); outer = that sub's own.
+   * Hours driving fill opacity: inner = main own + its active subs + its archived
+   * subs (a subless main's full-span segment is its own + archived subs); outer =
+   * that sub's own.
    */
   fillHours: number;
   /** "{Main} · general", "{Main} · {Sub}" or "{Main}". */
   title: string;
-  /** "{Main}, {Sub or 'general'}, {h} hours". */
+  /**
+   * "{Main}, {Sub or 'general'}, {h} hours"; h is editHours, except on a subless
+   * main's full-span segment, where it is fillHours (own + archived subs).
+   */
   ariaLabel: string;
 };
 
@@ -48,10 +52,31 @@ export function fitLabel(
   return { text: cut, fontSize: minSize };
 }
 
-/** Builds the wheel from active categories (in display order) and hours per category id. */
+/**
+ * Main id of each entry whose category is an archived subcategory, i.e. not among the
+ * active `categories` but with a parent. Archived mains are left out.
+ */
+export function archivedSubParents(
+  categories: DayCategory[],
+  entries: DayEntry[],
+): Record<string, string> {
+  const active = new Set(categories.map((c) => c.id));
+  const out: Record<string, string> = {};
+  for (const e of entries) {
+    if (!active.has(e.categoryId) && e.parentId) out[e.categoryId] = e.parentId;
+  }
+  return out;
+}
+
+/**
+ * Builds the wheel from active categories (in display order) and hours per category id.
+ * `archivedParents` (from archivedSubParents) maps archived subs to their main, whose
+ * inner fill then includes their hours; they get no segment of their own.
+ */
 export function buildWheel(
   categories: DayCategory[],
   hours: Record<string, number>,
+  archivedParents: Record<string, string> = {},
   size: number = WHEEL_SIZE,
 ): WheelSegment[] {
   const mains = categories.filter((c) => c.parentId === null);
@@ -61,6 +86,10 @@ export function buildWheel(
     if (c.parentId !== null) subsOf.get(c.parentId)?.push(c);
   }
   const h = (id: string) => hours[id] ?? 0;
+  const archivedHours = new Map<string, number>();
+  for (const [id, mainId] of Object.entries(archivedParents)) {
+    archivedHours.set(mainId, (archivedHours.get(mainId) ?? 0) + h(id));
+  }
 
   const segments = layoutWheel(
     mains.map((m) => ({ id: m.id, subIds: (subsOf.get(m.id) ?? []).map((s) => s.id) })),
@@ -75,7 +104,11 @@ export function buildWheel(
     const editId = sub ? sub.id : main.id;
     const editHours = h(editId);
     const fillHours =
-      seg.ring === "inner" ? subs.reduce((sum, s) => sum + h(s.id), h(main.id)) : editHours;
+      seg.ring === "inner"
+        ? subs.reduce((sum, s) => sum + h(s.id), h(main.id) + (archivedHours.get(main.id) ?? 0))
+        : editHours;
+    // A subless main's segment stands for the whole main, so it reads out what it shows.
+    const labelHours = seg.ring === "inner" && subs.length === 0 ? fillHours : editHours;
     const title = sub
       ? `${main.name} · ${sub.name}`
       : subs.length > 0
@@ -90,7 +123,7 @@ export function buildWheel(
       editHours,
       fillHours,
       title,
-      ariaLabel: `${main.name}, ${sub ? sub.name : "general"}, ${formatHours(editHours)} hours`,
+      ariaLabel: `${main.name}, ${sub ? sub.name : "general"}, ${formatHours(labelHours)} hours`,
     };
   });
 }
