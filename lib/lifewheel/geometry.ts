@@ -206,9 +206,18 @@ export function valuedPoints(
   return out;
 }
 
-function fmt(n: number): string {
+/**
+ * A coordinate to 2 decimals, as paths are written. Dots use it too, so they
+ * sit exactly on the path's vertices and server and browser trig (which can
+ * differ in the last digits) render the same attribute.
+ */
+export function roundCoord(n: number): number {
   const v = Math.round(n * 100) / 100;
-  return String(Object.is(v, -0) ? 0 : v);
+  return Object.is(v, -0) ? 0 : v;
+}
+
+function fmt(n: number): string {
+  return String(roundCoord(n));
 }
 
 /**

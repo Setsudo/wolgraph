@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
-import { valuedPath, valuedPoints } from "@/lib/lifewheel/geometry";
+import { roundCoord, valuedPath, valuedPoints } from "@/lib/lifewheel/geometry";
 import {
   retarget,
   sample,
@@ -57,6 +57,9 @@ export function LifeWheelPlot({
 }: LifeWheelPlotProps) {
   // null = at rest: draw the targets straight from props (identical on server and client).
   const [frame, setFrame] = useState<Shown[] | null>(null);
+  // Server and first client render mark the data layer pending; with the
+  // motion flag on <html> (app/layout.tsx) CSS hides it until the pop-in starts.
+  const [pending, setPending] = useState(true);
   const motions = useRef<Motion[] | null>(null);
   const n = radii.length;
   // Value-equal radii keep the effect quiet across unrelated re-renders.
@@ -67,6 +70,8 @@ export function LifeWheelPlot({
     const count = targets.length;
     if (!canAnimate()) {
       motions.current = settledMotions(targets);
+      // Before paint: reveal the final state at once.
+      setPending(false);
       return;
     }
     const first = motions.current === null;
@@ -74,7 +79,10 @@ export function LifeWheelPlot({
     const tick = (now: number) => {
       const s = sample(motions.current ?? [], now, count, size);
       motions.current = s.motions;
-      flushSync(() => setFrame(s.done ? null : s.shown));
+      flushSync(() => {
+        setFrame(s.done ? null : s.shown);
+        setPending(false);
+      });
       raf = s.done ? 0 : window.requestAnimationFrame(tick);
     };
     motions.current = retarget(motions.current ?? [], targets, performance.now(), first, size);
@@ -90,55 +98,61 @@ export function LifeWheelPlot({
   for (const s of shown) if (s.index < n) at[s.index] = s.r;
   const pts = valuedPoints(at, size);
   const path = valuedPath(pts);
+  const dataLayer = { "data-lifewheel-data": "", "data-pending": pending ? "" : undefined };
 
   return (
     <svg viewBox={`0 0 ${size} ${size}`} role="img" aria-label={ariaLabel} className={className}>
       <defs>{defs}</defs>
       {/* Fill under the grid so grid lines stay readable through it. */}
-      {path && <path data-part="data" d={path} className="fill-teal" fillOpacity={0.4} />}
+      <g {...dataLayer}>
+        {path && <path data-part="data" d={path} className="fill-teal" fillOpacity={0.4} />}
+      </g>
       {grid}
       {/* Outline and dots above the grid, as in the reference. */}
-      {path && (
-        <path
-          data-part="data-outline"
-          d={path}
-          className="fill-none stroke-teal"
-          strokeWidth={2}
-          strokeLinejoin="round"
-        />
-      )}
-      {pts.map((p) => {
-        const color = colors?.[p.index];
-        const s = scaleOf.get(p.index) ?? 1;
-        // Scale about the dot's own centre.
-        const transform =
-          s === 1 ? undefined : `translate(${p.x} ${p.y}) scale(${s}) translate(${-p.x} ${-p.y})`;
-        return color ? (
-          <circle
-            key={p.index}
-            data-part="dot"
-            data-index={p.index}
-            cx={p.x}
-            cy={p.y}
-            r={5}
-            fill={color}
-            className="stroke-cream"
-            strokeWidth={1.5}
-            transform={transform}
+      <g {...dataLayer}>
+        {path && (
+          <path
+            data-part="data-outline"
+            d={path}
+            className="fill-none stroke-teal"
+            strokeWidth={2}
+            strokeLinejoin="round"
           />
-        ) : (
-          <circle
-            key={p.index}
-            data-part="dot"
-            data-index={p.index}
-            cx={p.x}
-            cy={p.y}
-            r={4}
-            className="fill-teal"
-            transform={transform}
-          />
-        );
-      })}
+        )}
+        {pts.map(({ index, ...raw }) => {
+          const p = { index, x: roundCoord(raw.x), y: roundCoord(raw.y) };
+          const color = colors?.[p.index];
+          const s = scaleOf.get(p.index) ?? 1;
+          // Scale about the dot's own centre.
+          const transform =
+            s === 1 ? undefined : `translate(${p.x} ${p.y}) scale(${s}) translate(${-p.x} ${-p.y})`;
+          return color ? (
+            <circle
+              key={p.index}
+              data-part="dot"
+              data-index={p.index}
+              cx={p.x}
+              cy={p.y}
+              r={5}
+              fill={color}
+              className="stroke-cream"
+              strokeWidth={1.5}
+              transform={transform}
+            />
+          ) : (
+            <circle
+              key={p.index}
+              data-part="dot"
+              data-index={p.index}
+              cx={p.x}
+              cy={p.y}
+              r={4}
+              className="fill-teal"
+              transform={transform}
+            />
+          );
+        })}
+      </g>
       {overlay}
     </svg>
   );

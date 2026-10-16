@@ -192,9 +192,10 @@ describe("LifeWheel", () => {
     }
     const c2 = wheel({ values: [50, -1, NaN, 0, 0, 0, 0, 0] });
     const [far] = all(c2, "dot");
+    // Dots are written to 2 decimals.
     const dx = Number(far.getAttribute("cx")) - 300;
     const dy = Number(far.getAttribute("cy")) - 300;
-    expect(Math.hypot(dx, dy)).toBeCloseTo(230, 6);
+    expect(Math.hypot(dx, dy)).toBeCloseTo(230, 1);
   });
 
   it("a null value has no dot and the shape bridges past it", () => {
@@ -252,9 +253,11 @@ describe("LifeWheel", () => {
     );
     expect(html.match(/data-part="dot"/g)).toHaveLength(7);
     expect(html).not.toContain("scale(");
-    // Sector 0 at 10/10: on the boundary at 22.5°.
-    const x = 300 + 230 * Math.sin((22.5 * Math.PI) / 180);
-    expect(html).toContain(`cx="${x}"`);
+    // Fill, and outline + dots, are marked pending for the CSS motion gate.
+    expect(html.match(/data-lifewheel-data="" data-pending=""/g)).toHaveLength(2);
+    // Sector 0 at 10/10: on the boundary at 22.5°, to 2 decimals like the path.
+    expect(html).toContain('cx="388.02" cy="87.51"');
+    expect(html).toContain("M 388.02 87.51 L");
   });
 
   describe("motion", () => {
@@ -303,19 +306,24 @@ describe("LifeWheel", () => {
       browser(true);
       const c = wheel({ values: [10, 5, null, 7, 2, 0, 5, 3] });
       expect(queue).toHaveLength(0);
+      expect(c.querySelectorAll("[data-lifewheel-data]")).toHaveLength(2);
+      expect(c.querySelectorAll("[data-pending]")).toHaveLength(0);
       const dots = all(c, "dot");
       expect(dots).toHaveLength(7);
-      expect(dist(dots[0])).toBeCloseTo(230, 6);
+      expect(dist(dots[0])).toBeCloseTo(230, 1);
       for (const d of dots) expect(d.getAttribute("transform")).toBeNull();
     });
 
     it("pops points in from the centre on mount, staggered, then settles", () => {
       browser(false);
       const c = wheel({ values: [10, 10, 10, 10, 10, 10, 10, 10] });
+      // Still pending (hidden by CSS) until the first frame of the pop-in.
+      expect(c.querySelectorAll("[data-pending]")).toHaveLength(2);
       frame(0);
+      expect(c.querySelectorAll("[data-pending]")).toHaveLength(0);
       let dots = all(c, "dot");
       for (const d of dots) {
-        expect(dist(d)).toBeCloseTo(0, 6);
+        expect(dist(d)).toBeCloseTo(0, 1);
         expect(scaleOf(d)).toBe(0);
       }
       frame(STAGGER_MS + 100);
@@ -329,7 +337,7 @@ describe("LifeWheel", () => {
       frame(7 * STAGGER_MS + ENTER_MS);
       dots = all(c, "dot");
       for (const d of dots) {
-        expect(dist(d)).toBeCloseTo(230, 6);
+        expect(dist(d)).toBeCloseTo(230, 1);
         expect(d.getAttribute("transform")).toBeNull();
       }
       expect(queue).toHaveLength(0);
@@ -353,13 +361,13 @@ describe("LifeWheel", () => {
       now = 3000;
       rerender(<LifeWheel {...props} values={[5, 10, 10, 10, 10, 10, 10, 10]} />);
       frame(3000);
-      expect(dist(all(c, "dot")[0])).toBeCloseTo(230, 6);
+      expect(dist(all(c, "dot")[0])).toBeCloseTo(230, 1);
       frame(3000 + MOVE_MS / 2);
       const mid = dist(all(c, "dot")[0]);
       expect(mid).toBeLessThan(230);
       expect(mid).toBeGreaterThan(115);
       frame(3000 + MOVE_MS);
-      expect(dist(all(c, "dot")[0])).toBeCloseTo(115, 6);
+      expect(dist(all(c, "dot")[0])).toBeCloseTo(115, 1);
 
       now = 4000;
       rerender(<LifeWheel {...props} values={[5, null, 10, 10, 10, 10, 10, 10]} />);

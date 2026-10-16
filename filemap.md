@@ -14,7 +14,7 @@
 - `playwright.config.ts`, `e2e/` — Playwright e2e specs; `PLAYWRIGHT_CHROMIUM_PATH` overrides the browser binary
 - `.env.example` — required env vars (Supabase URL and anon key)
 - `.github/workflows/ci.yml` — CI: install, lint, typecheck, unit tests
-- `app/layout.tsx`, `app/globals.css` — root layout; theme tokens (`@theme`)
+- `app/layout.tsx`, `app/globals.css` — root layout (inline motion flag on `<html>` for the LifeWheel pop-in gate); theme tokens (`@theme`)
 - `app/page.tsx` (+ `page.test.tsx`) — redirects `/` to `/rate` (home); the test also covers `/day`
 - `app/(auth)/login/page.tsx` — sign-in (placeholder)
 - `app/(app)/layout.tsx` — signed-in shell with main nav (Rate, Log, Trends, Categories)

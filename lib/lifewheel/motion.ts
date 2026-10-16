@@ -3,9 +3,11 @@
  * and dot scale over time. No DOM or React; components/LifeWheelPlot drives it
  * with requestAnimationFrame timestamps (ms).
  *
- * - Enter (first value, or null -> number): radius grows from the centre and
- *   the dot pops 0 -> 1.15 -> 1 over ENTER_MS. On first mount each sector
- *   starts STAGGER_MS after the previous one, in sector order.
+ * - Enter (first value, or null -> number): the dot pops 0 -> 1.15 -> 1 over
+ *   ENTER_MS while the radius grows to its value: from the centre on first
+ *   mount (each sector STAGGER_MS after the previous one, in sector order),
+ *   later from the bridge between its rated neighbours (the centre when fewer
+ *   than two remain).
  * - Move (number -> number): radius glides over MOVE_MS, no overshoot.
  * - Leave (number -> null): the dot shrinks to 0 and the vertex retracts to
  *   the bridge between its remaining neighbours over LEAVE_MS, then is removed.
@@ -171,6 +173,9 @@ export function retarget(
   );
   const byIndex = new Map(current.motions.map((m) => [m.index, m]));
   const shownAt = new Map(current.shown.map((s) => [s.index, s]));
+  const staying = current.motions.filter((m) => m.target !== null);
+  const at = new Map(current.shown.map((s) => [s.index, s.r]));
+  const centres = sectorCentres(n);
   const out: Motion[] = [];
 
   targets.forEach((target, index) => {
@@ -192,10 +197,13 @@ export function retarget(
     }
     if (!m || !s) {
       const start = now + (first ? index * STAGGER_MS : 0);
+      // On first mount the shape grows from the centre; later, a new vertex
+      // grows out of the bridge between its rated neighbours (no notch).
+      const from = first ? 0 : bridgeFor(index, staying, at, centres, size);
       out.push({
         index,
         target,
-        radius: { from: 0, to: target, start, duration: ENTER_MS, ease: "out" },
+        radius: { from, to: target, start, duration: ENTER_MS, ease: "out" },
         scale: { from: 0, to: 1, start, duration: ENTER_MS, ease: "pop" },
       });
       return;

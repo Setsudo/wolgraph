@@ -66,13 +66,29 @@ describe("enter", () => {
     expect(sample(m, 3 * STAGGER_MS + ENTER_MS - 1, 4).done).toBe(false);
   });
 
-  it("null -> number pops in from the centre with no stagger", () => {
-    const rest = settledMotions([100, null, 80]);
-    const m = retarget(rest, [100, 60, 80], 1000, false);
-    expect(at(sample(m, 1000, 3).shown, 1)).toMatchObject({ r: 0, scale: 0 });
-    expect(at(sample(m, 1000 + ENTER_MS, 3).shown, 1)).toMatchObject({ r: 60, scale: 1 });
+  it("null -> number between rated neighbours grows out of their bridge, no stagger", () => {
+    const rest = settledMotions([R, null, R, R]);
+    const m = retarget(rest, [R, 60, R, R], 1000, false);
+    const centres = sectorCentres(4);
+    const bridge = bridgeRadius(
+      polarToXY(R, centres[0], 600),
+      polarToXY(R, centres[2], 600),
+      centres[1],
+    );
+    expect(bridge).toBeGreaterThan(0);
+    expect(at(sample(m, 1000, 4).shown, 1)).toMatchObject({ r: bridge, scale: 0 });
+    expect(at(sample(m, 1000 + ENTER_MS, 4).shown, 1)).toMatchObject({ r: 60, scale: 1 });
+    // The dot still pops past full size.
+    expect(at(sample(m, 1000 + 0.6 * ENTER_MS, 4).shown, 1)!.scale).toBeCloseTo(POP_PEAK, 6);
     // The others stay put.
-    expect(at(sample(m, 1100, 3).shown, 0)).toMatchObject({ r: 100, scale: 1 });
+    expect(at(sample(m, 1100, 4).shown, 0)).toMatchObject({ r: R, scale: 1 });
+  });
+
+  it("null -> number with fewer than two rated neighbours grows from the centre", () => {
+    const m = retarget(settledMotions([R, null, null]), [R, 60, null], 0, false);
+    expect(at(sample(m, 0, 3).shown, 1)).toMatchObject({ r: 0, scale: 0 });
+    const none = retarget([], [null, 60, null], 0, false);
+    expect(at(sample(none, 0, 3).shown, 1)).toMatchObject({ r: 0, scale: 0 });
   });
 });
 
