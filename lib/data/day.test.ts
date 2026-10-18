@@ -9,7 +9,9 @@ const { getDay } = await import("./day");
 type Query = { table: string; filters: [string, ...unknown[]][] };
 
 /** A thenable stand-in for the supabase-js query builder, answered per table. */
-function fakeClient(data: Record<string, unknown[]>, seen: Query[]) {
+type Rows = unknown[] | ((q: Query) => unknown[]);
+
+function fakeClient(data: Record<string, Rows>, seen: Query[]) {
   return {
     auth: { getClaims: async () => ({ data: { claims: { sub: "user-1" } } }) },
     from: (table: string) => {
@@ -22,8 +24,13 @@ function fakeClient(data: Record<string, unknown[]>, seen: Query[]) {
           return chain;
         };
       }
-      chain.then = (ok: (r: unknown) => unknown) =>
-        Promise.resolve({ data: data[table], error: null }).then(ok);
+      chain.then = (ok: (r: unknown) => unknown) => {
+        const rows = data[table];
+        return Promise.resolve({
+          data: typeof rows === "function" ? rows(q) : rows,
+          error: null,
+        }).then(ok);
+      };
       return chain;
     },
   };
@@ -41,11 +48,17 @@ describe("getDay", () => {
             { id: "career", parent_id: null, name: "Career", color: "#C8553D" },
             { id: "deep", parent_id: "career", name: "Deep work", color: "#C8553D" },
           ],
-          entries: [
-            { category_id: "deep", hours: "2.50", category: { parent_id: "career" } },
-            { category_id: "archived-sub", hours: 1, category: { parent_id: "career" } },
-            { category_id: "career", hours: 0.5, category: { parent_id: null } },
-          ],
+          entries: (q) =>
+            q.filters.some(([m, col, v]) => m === "eq" && col === "day" && v === "2026-10-14")
+              ? [
+                  { category_id: "deep", hours: "1.75" },
+                  { category_id: "archived-sub", hours: 3 },
+                ]
+              : [
+                  { category_id: "deep", hours: "2.50", category: { parent_id: "career" } },
+                  { category_id: "archived-sub", hours: 1, category: { parent_id: "career" } },
+                  { category_id: "career", hours: 0.5, category: { parent_id: null } },
+                ],
         },
         seen,
       ),
@@ -60,6 +73,8 @@ describe("getDay", () => {
         { categoryId: "archived-sub", hours: 1, parentId: "career" },
         { categoryId: "career", hours: 0.5, parentId: null },
       ],
+      // The day before, archived categories left out: what "Copy previous day" offers.
+      previous: [{ categoryId: "deep", hours: 1.75 }],
     });
     const categories = seen.find((q) => q.table === "categories")!;
     expect(categories.filters).toContainEqual(["is", "archived_at", null]);
@@ -67,7 +82,9 @@ describe("getDay", () => {
       ["order", "sort_order", { ascending: true }],
       ["order", "name", { ascending: true }],
     ]);
-    const entries = seen.find((q) => q.table === "entries")!;
+    const [entries, previous] = seen.filter((q) => q.table === "entries");
+    expect(previous.filters).toContainEqual(["eq", "day", "2026-10-14"]);
+    expect(previous.filters).toContainEqual(["eq", "user_id", "user-1"]);
     expect(entries.filters).toContainEqual(["eq", "day", "2026-10-15"]);
     // Each entry's parent comes from its category, so archived subs can be mapped to their main.
     expect(entries.filters).toContainEqual([

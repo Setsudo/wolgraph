@@ -251,6 +251,9 @@ describe("LifeWheel", () => {
       expect(ghost[0].getAttribute("stroke-linejoin")).toBe("round");
       expect(ghost[0].getAttribute("aria-hidden")).toBe("true");
       expect(ghost[0].getAttribute("class")).toContain("fill-none");
+      // Stronger on phones (owner choice 2026-10-18); the attributes above are the desktop look.
+      expect(ghost[0].getAttribute("class")).toContain("[stroke-width:4]");
+      expect(ghost[0].getAttribute("class")).toContain("md:[stroke-width:1.5]");
       expect(ghost[0].getAttribute("class")).toContain("stroke-navy/35");
       expect(ghost[0].getAttribute("d")!.match(/[ML]/g)).toHaveLength(8);
       // Dots belong to the values only.

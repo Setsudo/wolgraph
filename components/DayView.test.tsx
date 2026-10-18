@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { PREVIEW_CATEGORIES, PREVIEW_ENTRIES } from "@/app/dev/day-preview/fixtures";
-import type { SaveEntry } from "@/lib/data/day";
-import { todayLocal } from "@/lib/date";
-import { DayView, SAVE_FAILED_MESSAGE } from "./DayView";
+import type { CopyPreviousDay, SaveEntry } from "@/lib/data/day";
+import { addDays, todayLocal } from "@/lib/date";
+import { COPY_FAILED_MESSAGE, DayView, SAVE_FAILED_MESSAGE } from "./DayView";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -276,5 +276,97 @@ describe("DayView with subcategories", () => {
     await act(async () => vi.advanceTimersByTime(400));
     expect(save).toHaveBeenCalledWith(date, "family", 2.25);
     expect(screen.getByRole("status").textContent).toBe("Saved");
+  });
+});
+
+describe("DayView copy previous day", () => {
+  const COPIED = PREVIEW_ENTRIES.map(({ categoryId, hours }) => ({ categoryId, hours }));
+  /** The day total in the wheel's centre. */
+  const wheelTotal = () => document.querySelector('text[font-size="28"]')?.textContent;
+  const copyButton = () => screen.queryByRole("button", { name: /^Copy / });
+
+  function renderEmpty(save: SaveEntry, copy: CopyPreviousDay, date = todayLocal()) {
+    render(
+      <DayView
+        date={date}
+        categories={PREVIEW_CATEGORIES}
+        entries={[]}
+        previous={PREVIEW_ENTRIES}
+        save={save}
+        copy={copy}
+      />,
+    );
+  }
+
+  it("never copies on its own: nothing is written until the button is tapped", async () => {
+    const save = vi.fn<SaveEntry>().mockResolvedValue({ ok: true });
+    const copy = vi.fn<CopyPreviousDay>().mockResolvedValue({ ok: true, copied: COPIED });
+    renderEmpty(save, copy);
+    await act(async () => vi.advanceTimersByTime(5000));
+    expect(copy).not.toHaveBeenCalled();
+    expect(save).not.toHaveBeenCalled();
+    expect(wheelTotal()).toBe("0 h");
+    expect(copyButton()?.textContent).toBe("Copy yesterday's hours (17.5 h)");
+  });
+
+  it("copies on tap, fills the wheel, hides the button, and Undo clears the copy", async () => {
+    const save = vi.fn<SaveEntry>().mockResolvedValue({ ok: true });
+    const copy = vi.fn<CopyPreviousDay>().mockResolvedValue({ ok: true, copied: COPIED });
+    renderEmpty(save, copy);
+    await act(async () => fireEvent.click(copyButton()!));
+    expect(copy).toHaveBeenCalledWith(todayLocal());
+    expect(wheelTotal()).toBe("17.5 h");
+    expect(copyButton()).toBeNull();
+    expect(screen.getByRole("status").textContent).toContain("Copied 6 entries from yesterday.");
+
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    await act(async () => vi.advanceTimersByTime(400));
+    expect(save).toHaveBeenCalledTimes(6);
+    for (const e of COPIED) expect(save).toHaveBeenCalledWith(todayLocal(), e.categoryId, 0);
+    expect(wheelTotal()).toBe("0 h");
+  });
+
+  it("shows a failure and changes nothing when the copy fails", async () => {
+    const copy = vi.fn<CopyPreviousDay>().mockResolvedValue({ ok: false, message: "x" });
+    renderEmpty(vi.fn<SaveEntry>(), copy);
+    await act(async () => fireEvent.click(copyButton()!));
+    expect(screen.getByRole("alert").textContent).toBe(COPY_FAILED_MESSAGE);
+    expect(wheelTotal()).toBe("0 h");
+  });
+
+  it("is not offered once the day has hours, or on a future day, or with nothing to copy", () => {
+    const copy = vi.fn<CopyPreviousDay>();
+    render(
+      <DayView
+        date={todayLocal()}
+        categories={PREVIEW_CATEGORIES}
+        entries={PREVIEW_ENTRIES}
+        previous={PREVIEW_ENTRIES}
+        save={vi.fn<SaveEntry>()}
+        copy={copy}
+      />,
+    );
+    expect(copyButton()).toBeNull();
+    cleanup();
+    renderEmpty(vi.fn<SaveEntry>(), copy, addDays(todayLocal(), 1));
+    expect(copyButton()).toBeNull();
+    cleanup();
+    render(
+      <DayView
+        date={todayLocal()}
+        categories={PREVIEW_CATEGORIES}
+        entries={[]}
+        previous={[]}
+        save={vi.fn<SaveEntry>()}
+        copy={copy}
+      />,
+    );
+    expect(copyButton()).toBeNull();
+  });
+
+  it("names the source date on a past day", () => {
+    const day = addDays(todayLocal(), -3);
+    renderEmpty(vi.fn<SaveEntry>(), vi.fn<CopyPreviousDay>(), day);
+    expect(copyButton()?.textContent).toMatch(/^Copy hours from \w{3}, \w{3} \d+ \(17\.5 h\)$/);
   });
 });

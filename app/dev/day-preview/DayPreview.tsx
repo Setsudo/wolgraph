@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { DayView } from "@/components/DayView";
 import { useLocalToday } from "@/components/useLocalToday";
-import type { SaveResult } from "@/lib/data/day";
+import type { CopyResult, SaveResult } from "@/lib/data/day";
+import { copyableEntries } from "@/lib/day/copy";
 import {
   PREVIEW_CATEGORIES,
   PREVIEW_ENTRIES,
@@ -19,11 +20,27 @@ function fakeSave(): Promise<SaveResult> {
   );
 }
 
+/** Stands in for copyPreviousDay: "copies" the fixture hours after 300 ms (rejects with ?fail=1). */
+function fakeCopy(): Promise<CopyResult> {
+  const fail = new URLSearchParams(window.location.search).get("fail") === "1";
+  const copied = copyableEntries(
+    PREVIEW_CATEGORIES.map((c) => c.id),
+    PREVIEW_ENTRIES,
+  );
+  return new Promise((resolve, reject) =>
+    setTimeout(
+      () => (fail ? reject(new Error("Simulated failure")) : resolve({ ok: true, copied })),
+      300,
+    ),
+  );
+}
+
 /**
  * The real DayView fed fixtures; today has the fixture hours, other days are empty.
- * `subs` swaps in the crowded-subcategory fixtures.
+ * `subs` swaps in the crowded-subcategory fixtures. `copy`: today starts empty and the
+ * fixture hours are the previous day's, so "Copy yesterday's hours" shows.
  */
-export function DayPreview({ subs = false }: { subs?: boolean }) {
+export function DayPreview({ subs = false, copy = false }: { subs?: boolean; copy?: boolean }) {
   const today = useLocalToday();
   const [day, setDay] = useState<string | null>(null);
   const date = day ?? today;
@@ -33,8 +50,10 @@ export function DayPreview({ subs = false }: { subs?: boolean }) {
       key={date}
       date={date}
       categories={subs ? SUB_PREVIEW_CATEGORIES : PREVIEW_CATEGORIES}
-      entries={date === today ? (subs ? SUB_PREVIEW_ENTRIES : PREVIEW_ENTRIES) : []}
+      entries={date === today && !copy ? (subs ? SUB_PREVIEW_ENTRIES : PREVIEW_ENTRIES) : []}
+      previous={copy ? PREVIEW_ENTRIES : []}
       save={fakeSave}
+      copy={copy ? fakeCopy : undefined}
       onNavigate={setDay}
     />
   );

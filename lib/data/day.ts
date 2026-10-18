@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import { addDays } from "@/lib/date";
+import { copyableEntries, type CopiedEntry } from "@/lib/day/copy";
 import { createClient } from "@/lib/supabase/server";
 
 /** An active category as the day screen needs it. Subcategories carry their main's color. */
@@ -24,12 +26,19 @@ export type DayData = {
   categories: DayCategory[];
   /** Every entry of the day, including those of archived categories. */
   entries: DayEntry[];
+  /** The previous day's entries on active categories: what "Copy previous day" would copy. */
+  previous: DayEntry[];
 };
 
 export type SaveResult = { ok: true } | { ok: false; message: string };
 
 /** Writes one category's hours for a day; 0 deletes the entry. */
 export type SaveEntry = (day: string, categoryId: string, hours: number) => Promise<SaveResult>;
+
+export type CopyResult = { ok: true; copied: CopiedEntry[] } | { ok: false; message: string };
+
+/** Copies the previous day's hours onto an empty `day`; never overwrites an existing entry. */
+export type CopyPreviousDay = (day: string) => Promise<CopyResult>;
 
 /** The signed-in user's active categories and all entries for `day` (YYYY-MM-DD). Server only. */
 export async function getDay(day: string): Promise<DayData> {
@@ -38,7 +47,7 @@ export async function getDay(day: string): Promise<DayData> {
   const userId = auth?.claims?.sub;
   if (!userId) redirect(`/login?${new URLSearchParams({ next: `/day/${day}` })}`);
 
-  const [categories, entries] = await Promise.all([
+  const [categories, entries, previous] = await Promise.all([
     supabase
       .from("categories")
       .select("id, parent_id, name, color")
@@ -51,9 +60,15 @@ export async function getDay(day: string): Promise<DayData> {
       .select("category_id, hours, category:categories!entries_category_id_fkey(parent_id)")
       .eq("user_id", userId)
       .eq("day", day),
+    supabase
+      .from("entries")
+      .select("category_id, hours")
+      .eq("user_id", userId)
+      .eq("day", addDays(day, -1)),
   ]);
   if (categories.error) throw new Error(`Could not load categories: ${categories.error.message}`);
   if (entries.error) throw new Error(`Could not load entries: ${entries.error.message}`);
+  if (previous.error) throw new Error(`Could not load entries: ${previous.error.message}`);
 
   return {
     categories: categories.data.map((c) => ({
@@ -67,5 +82,9 @@ export async function getDay(day: string): Promise<DayData> {
       hours: Number(e.hours),
       parentId: e.category?.parent_id ?? null,
     })),
+    previous: copyableEntries(
+      categories.data.map((c) => c.id),
+      previous.data.map((e) => ({ categoryId: e.category_id, hours: Number(e.hours) })),
+    ),
   };
 }

@@ -116,7 +116,9 @@ export function LifeWheelPlot({
           data-part="ghost"
           aria-hidden="true"
           d={ghostPath}
-          className="fill-none stroke-navy/35"
+          // The SVG scales with the screen, so on phones (under 768px) the line gets thicker,
+          // longer dashes and more contrast; from 768px the attributes below apply as is.
+          className="fill-none stroke-navy/60 [stroke-dasharray:10_6] [stroke-width:4] md:stroke-navy/35 md:[stroke-dasharray:4_4] md:[stroke-width:1.5]"
           strokeWidth={1.5}
           strokeDasharray="4 4"
           strokeLinejoin="round"

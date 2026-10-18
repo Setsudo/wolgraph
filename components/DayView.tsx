@@ -2,8 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { DayCategory, DayEntry, SaveEntry } from "@/lib/data/day";
+import type { CopyPreviousDay, DayCategory, DayEntry, SaveEntry } from "@/lib/data/day";
 import { addDays, formatDayLabel, isValidDay } from "@/lib/date";
+import {
+  canOfferCopy,
+  copiedMessage,
+  copyLabel,
+  copyPlan,
+  previousDayName,
+  type CopiedEntry,
+} from "@/lib/day/copy";
 import { archivedSubParents, buildWheel, dayTotal, mainPanel } from "@/lib/wheel/model";
 import { HourSheet, type SaveStatus } from "./HourSheet";
 import { useLocalToday } from "./useLocalToday";
@@ -12,14 +20,21 @@ import { Wheel } from "./Wheel";
 export const SAVE_DEBOUNCE_MS = 400;
 export const TOAST_MS = 4000;
 export const SAVE_FAILED_MESSAGE = "Couldn't save. Your change was undone.";
-const TOAST_CLASS =
-  "left-1/2 z-50 -translate-x-1/2 rounded-full bg-amber px-4 py-2 text-[14px] whitespace-nowrap text-cream";
+export const COPY_FAILED_MESSAGE = "Couldn't copy. Nothing changed.";
+export const COPY_NOTICE_MS = 6000;
+const TOAST_BASE =
+  "left-1/2 z-50 -translate-x-1/2 rounded-full px-4 py-2 text-[14px] whitespace-nowrap text-cream";
+const TOAST_CLASS = `${TOAST_BASE} bg-amber`;
 
 type DayViewProps = {
   date: string;
   categories: DayCategory[];
   entries: DayEntry[];
   save: SaveEntry;
+  /** The previous day's copyable entries (getDay's `previous`). */
+  previous?: DayEntry[];
+  /** Copies the previous day onto this one; without it the copy button never shows. */
+  copy?: CopyPreviousDay;
   /** Defaults to router.push(`/day/${day}`). */
   onNavigate?: (day: string) => void;
 };
@@ -40,7 +55,15 @@ function withValue(hours: Hours, categoryId: string, value: number): Hours {
 }
 
 /** Daily entry screen (SPEC §6.2): day navigation, wheel, hour sheet and optimistic saving. */
-export function DayView({ date, categories, entries, save, onNavigate }: DayViewProps) {
+export function DayView({
+  date,
+  categories,
+  entries,
+  save,
+  previous = [],
+  copy,
+  onNavigate,
+}: DayViewProps) {
   const router = useRouter();
   const today = useLocalToday();
   const goTo = (day: string) => (onNavigate ? onNavigate(day) : router.push(`/day/${day}`));
@@ -56,6 +79,11 @@ export function DayView({ date, categories, entries, save, onNavigate }: DayView
   /** Panel row that quick add and Clear target; null = General (the main's own row). */
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
   const [toastId, setToastId] = useState(0);
+  const [copying, setCopying] = useState(false);
+  /** Outcome of the last copy: the entries written (with Undo), or a failure. */
+  const [copyNotice, setCopyNotice] = useState<
+    { kind: "copied"; entries: CopiedEntry[] } | { kind: "failed" } | null
+  >(null);
 
   const saved = useRef<Hours>(toHours(entries));
   /** Latest edit per category, and the latest edit whose save has finished. Unequal = unsettled. */
@@ -78,6 +106,16 @@ export function DayView({ date, categories, entries, save, onNavigate }: DayView
     () => buildWheel(categories, hours, archivedParents),
     [categories, hours, archivedParents],
   );
+  const plan = useMemo(() => copyPlan(categories, previous), [categories, previous]);
+  const offerCopy =
+    copy !== undefined &&
+    !copying &&
+    canOfferCopy({
+      readOnly,
+      dayTotal: dayTotal(hours),
+      unsettled: Object.values(status).includes("saving"),
+      copyable: plan.entries.length,
+    });
   const selected = segments.find((s) => s.key === selectedKey) ?? null;
   const panel = selected ? mainPanel(segments, selected.mainId) : null;
 
@@ -151,6 +189,12 @@ export function DayView({ date, categories, entries, save, onNavigate }: DayView
     return () => clearTimeout(timer);
   }, [toastId]);
 
+  useEffect(() => {
+    if (!copyNotice) return;
+    const timer = setTimeout(() => setCopyNotice(null), COPY_NOTICE_MS);
+    return () => clearTimeout(timer);
+  }, [copyNotice]);
+
   const closeSheet = useCallback(() => {
     setSheetOpen(false);
     if (sheetRef.current?.contains(document.activeElement)) wheelRef.current?.focus();
@@ -178,6 +222,39 @@ export function DayView({ date, categories, entries, save, onNavigate }: DayView
       void send(categoryId, value, version);
     }, SAVE_DEBOUNCE_MS);
     pending.current.set(categoryId, { timer, value, version });
+  }
+
+  /** Explicit "copy previous day" tap: writes on the server, then shows what was copied. */
+  async function copyPrevious() {
+    if (!copy || copying || readOnly) return;
+    setCopying(true);
+    setCopyNotice(null);
+    let copied: CopiedEntry[] | null = null;
+    try {
+      const result = await copy(date);
+      if (result.ok) copied = result.copied;
+    } catch {
+      copied = null;
+    }
+    setCopying(false);
+    if (!copied) {
+      setCopyNotice({ kind: "failed" });
+      return;
+    }
+    // A category edited meanwhile keeps the user's value; the server never overwrote it either.
+    const unsettled = (id: string) => (versions.current[id] ?? 0) !== (settled.current[id] ?? 0);
+    const applied = copied.filter((e) => !unsettled(e.categoryId));
+    const apply = (h: Hours) =>
+      applied.reduce((acc, e) => withValue(acc, e.categoryId, e.hours), h);
+    saved.current = apply(saved.current);
+    setHours(apply);
+    setCopyNotice({ kind: "copied", entries: copied });
+  }
+
+  /** Undo a copy: clears each copied entry the user hasn't changed since. */
+  function undoCopy(copied: CopiedEntry[]) {
+    for (const e of copied) if (hours[e.categoryId] === e.hours) change(e.categoryId, 0);
+    setCopyNotice(null);
   }
 
   function openPicker() {
@@ -255,6 +332,18 @@ export function DayView({ date, categories, entries, save, onNavigate }: DayView
 
       <div className="mt-4 md:flex md:items-center md:justify-center md:gap-12">
         <div className="min-w-0 md:w-[min(600px,58vw)]">
+          {(offerCopy || copying) && (
+            <div className="mb-2 flex justify-center">
+              <button
+                type="button"
+                className="h-11 rounded-full border border-teal px-4 text-[14px] text-teal disabled:opacity-60"
+                disabled={copying}
+                onClick={() => void copyPrevious()}
+              >
+                {copying ? "Copying…" : copyLabel(date, today, plan.total)}
+              </button>
+            </div>
+          )}
           <Wheel
             ref={wheelRef}
             segments={segments}
@@ -301,6 +390,32 @@ export function DayView({ date, categories, entries, save, onNavigate }: DayView
           }
         />
       </div>
+
+      {copyNotice && !toast && (
+        <div
+          role={copyNotice.kind === "failed" ? "alert" : "status"}
+          className={`fixed bottom-6 flex items-center gap-3 ${
+            copyNotice.kind === "failed" ? TOAST_CLASS : `${TOAST_BASE} bg-navy`
+          }`}
+        >
+          {copyNotice.kind === "failed" ? (
+            COPY_FAILED_MESSAGE
+          ) : (
+            <>
+              {copiedMessage(copyNotice.entries.length, previousDayName(date, today))}
+              {copyNotice.entries.length > 0 && (
+                <button
+                  type="button"
+                  className="-my-2 h-11 font-medium underline"
+                  onClick={() => undoCopy(copyNotice.entries)}
+                >
+                  Undo
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {toast && !sheetShown && (
         <div role="alert" className={`fixed bottom-6 ${TOAST_CLASS}`}>
