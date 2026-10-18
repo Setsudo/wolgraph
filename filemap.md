@@ -16,6 +16,7 @@
 - `.github/dependabot.yml` — weekly npm and monthly GitHub Actions update PRs (Next.js packages grouped)
 - `.github/pull_request_template.md` — PR description layout and checklist
 - `.github/workflows/ci.yml` — CI on pull requests and pushes to master: install, format check, lint, typecheck, unit tests, production build
+- `.github/workflows/prune-branches.yml` — manual (workflow_dispatch) cleanup: deletes branches with no open PR whose last PR was merged or closed, or with nothing master lacks; dry run by default
 - `app/layout.tsx`, `app/globals.css` — root layout (inline motion flag on `<html>` for the LifeWheel pop-in gate); theme tokens (`@theme`)
 - `app/page.tsx` (+ `page.test.tsx`) — redirects `/` to `/rate` (home); the test also covers `/day`
 - `app/(auth)/login/page.tsx` — sign-in (placeholder)
