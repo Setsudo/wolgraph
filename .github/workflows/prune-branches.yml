@@ -1,0 +1,45 @@
+name: Prune branches
+
+# Run by hand from the Actions tab (or by Claude via workflow_dispatch).
+# Deletes a branch only when it has no open PR and either its last PR was
+# merged or closed, or it has no commits that master lacks. Never touches
+# master. Starts as a dry run; set dry_run to false to delete.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: List what would be deleted without deleting
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      DRY_RUN: ${{ inputs.dry_run }}
+    steps:
+      - name: Prune merged and abandoned branches
+        run: |
+          set -euo pipefail
+          default=$(gh api "repos/$REPO" --jq .default_branch)
+          for b in $(gh api --paginate "repos/$REPO/branches" --jq '.[].name'); do
+            [ "$b" = "$default" ] && continue
+            open=$(gh pr list -R "$REPO" --head "$b" --state open --json number --jq length)
+            if [ "$open" != "0" ]; then echo "keep   $b (open PR)"; continue; fi
+            last=$(gh pr list -R "$REPO" --head "$b" --state all --limit 1 --json state --jq '.[0].state // ""')
+            ahead=$(gh api "repos/$REPO/compare/$default...$b" --jq .ahead_by)
+            if [ "$last" = "MERGED" ] || [ "$last" = "CLOSED" ] || [ "$ahead" = "0" ]; then
+              echo "delete $b (last PR: ${last:-none}, ahead of $default: $ahead)"
+              [ "$DRY_RUN" = "true" ] || gh api -X DELETE "repos/$REPO/git/refs/heads/$b"
+            else
+              echo "keep   $b (no PR, $ahead commits not on $default)"
+            fi
+          done
