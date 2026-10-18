@@ -1,20 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_SCORE, displayedScore, isValidScore } from "./score";
+import { SCORE_MIN, displayedScore, isValidScore } from "./score";
 
 describe("displayedScore", () => {
-  it("prefers today's score over the previous one", () => {
-    expect(displayedScore("a", { a: 8 }, { a: 3 })).toBe(8);
+  it("shows the day's saved score", () => {
+    expect(displayedScore("a", { a: 8 })).toBe(8);
+    expect(displayedScore("a", { a: 0 })).toBe(0);
   });
 
-  it("keeps a score of 0 today rather than falling back", () => {
-    expect(displayedScore("a", { a: 0 }, { a: 3 })).toBe(0);
-  });
-
-  it("falls back to the previous score, then to 5", () => {
-    expect(displayedScore("a", {}, { a: 0 })).toBe(0);
-    expect(displayedScore("a", {}, { a: 3 })).toBe(3);
-    expect(displayedScore("a", { b: 9 }, { b: 1 })).toBe(DEFAULT_SCORE);
-    expect(DEFAULT_SCORE).toBe(5);
+  it("shows 0 for a category with no score that day, never 5 or an earlier score", () => {
+    expect(displayedScore("a", {})).toBe(0);
+    expect(displayedScore("a", { b: 9 })).toBe(0);
+    expect(SCORE_MIN).toBe(0);
   });
 });
 

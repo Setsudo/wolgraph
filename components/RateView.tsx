@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { RateMain, SaveRating } from "@/lib/data/ratings";
+import type { RateMain, RatingsGhost, SaveRating } from "@/lib/data/ratings";
 import { addDays, formatDayLabel } from "@/lib/date";
 import { sideOrder } from "@/lib/rate/layout";
 import { displayedScore } from "@/lib/rate/score";
@@ -20,7 +20,8 @@ type RateViewProps = {
   day: string;
   mains: RateMain[];
   scores: Record<string, number>;
-  previous: Record<string, number>;
+  /** The last earlier rated day: a dashed outline on the wheel only, never a slider value or a save. */
+  ghost?: RatingsGhost | null;
   /** False when the ratings table is missing: sliders still move, nothing is sent. */
   available: boolean;
   save: SaveRating;
@@ -35,7 +36,7 @@ export function RateView({
   day,
   mains,
   scores,
-  previous,
+  ghost = null,
   available,
   save,
   onNavigate,
@@ -44,10 +45,7 @@ export function RateView({
   const today = useLocalToday();
   const goTo = (to: string) => (onNavigate ? onNavigate(to) : router.push(`/rate?day=${to}`));
   const canGoNext = today !== null && day < today;
-  const initial = useCallback(
-    (id: string) => displayedScore(id, scores, previous),
-    [scores, previous],
-  );
+  const initial = useCallback((id: string) => displayedScore(id, scores), [scores]);
 
   /** Values the user moved; every other category shows its displayed score. */
   const [moved, setMoved] = useState<Scores>({});
@@ -63,7 +61,7 @@ export function RateView({
     new Map<string, { timer: ReturnType<typeof setTimeout>; value: number; version: number }>(),
   );
   const saveRef = useRef(save);
-  const freshRef = useRef({ scores, previous });
+  const freshRef = useRef(scores);
 
   useEffect(() => {
     saveRef.current = save;
@@ -104,15 +102,14 @@ export function RateView({
   // Fresh server data (saveRating revalidates /rate): settled categories show the server's
   // value again; categories with a debounced or in-flight change keep their local value.
   useEffect(() => {
-    const fresh = freshRef.current;
-    if (fresh.scores === scores && fresh.previous === previous) return;
-    freshRef.current = { scores, previous };
+    if (freshRef.current === scores) return;
+    freshRef.current = scores;
     const unsettled = (id: string) => (versions.current[id] ?? 0) !== (settled.current[id] ?? 0);
     const keep = (local: Scores) =>
       Object.fromEntries(Object.entries(local).filter(([id]) => unsettled(id)));
     saved.current = keep(saved.current);
     setMoved((m) => keep(m));
-  }, [scores, previous]);
+  }, [scores]);
 
   // On unmount, send any change still waiting on its debounce instead of dropping it.
   useEffect(() => {
@@ -200,6 +197,11 @@ export function RateView({
           ›
         </button>
       </div>
+      {ghost && (
+        <p className="text-center text-[13px] text-navy/50">
+          Dashed outline: {formatDayLabel(ghost.day)}
+        </p>
+      )}
       {!available && (
         <p className="mt-2 text-center text-[14px] text-amber">{UNAVAILABLE_NOTICE}</p>
       )}
@@ -215,6 +217,7 @@ export function RateView({
             labels={mains.map((m) => m.name)}
             colors={mains.map((m) => m.color)}
             values={values}
+            ghost={ghost ? mains.map((m) => ghost.scores[m.id] ?? null) : undefined}
             max={10}
             maxWidthClass="max-w-[720px]"
             rings={RINGS}

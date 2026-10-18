@@ -125,7 +125,8 @@ Palette carried from the slider prototype: cream `#F8F1E4` background, navy `#1F
 
 Owner-approved 2026-10-15. The home page (`/`, nav "Wheel") is a "Wheel of Life" self-rating screen modelled on `docs/design/reference-wheel.png`: each active main category gets a 0-10 slider, and the wheel in the middle plots the current values (one sector per main, rings 1-10).
 
-- Ratings are for today only (the browser-local date, passed as `/rate?day=`); no day navigation yet. A slider shows today's score, else the most recent earlier score, else 5.
+- Ratings are for today only (the browser-local date, passed as `/rate?day=`); no day navigation yet. A slider shows the day's saved score, else 0: earlier scores are never carried over, so an untouched slider never records a false trend.
+- The latest earlier day with any ratings shows as a faint dashed outline behind the day's shape (no dots, not animated), captioned "Dashed outline: {day}" under the day arrows. Display only (owner request 2026-10-18): it never sets a slider and is never saved.
 - Only a slider the user moves is saved: optimistic, debounced 400 ms per category, rollback and error toast on failure, a small "Saved" status.
 - From 768px: sliders in two side columns beside their sectors (right: indices k..1, left: k+1..n-1 then 0, k = floor(n/2)). Phones: wheel, then all sliders in category order.
 - If the `ratings` table is missing, sliders still move the wheel, nothing is saved, and an amber notice says so.

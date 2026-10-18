@@ -3,6 +3,7 @@ import {
   LIFEWHEEL_RADIUS as R,
   LIFEWHEEL_SIZE as SIZE,
   fitLabels,
+  ghostPath,
   labelArcs,
   ringRadii,
   spokeAngles,
@@ -26,6 +27,11 @@ export type LifeWheelProps = {
   maxWidthClass?: string;
   /** Category colour per label (hex from the data); fills that label's value dot. */
   colors?: string[];
+  /**
+   * Optional faint dashed outline behind the shape (same order and scale as
+   * values; null = skipped). Display only: no dots, no animation.
+   */
+  ghost?: (number | null)[];
 };
 
 /**
@@ -44,6 +50,7 @@ export function LifeWheel({
   italic,
   maxWidthClass = "max-w-[560px]",
   colors,
+  ghost,
 }: LifeWheelProps) {
   const idPrefix = useId();
   // Referenced by URL fragment from <textPath href>, so keep it to safe characters.
@@ -57,6 +64,13 @@ export function LifeWheel({
     max,
     R,
   );
+  const ghostD = ghost
+    ? ghostPath(
+        labels.map((_, i) => ghost[i]),
+        max,
+        R,
+      )
+    : "";
   const ringValues = rings.filter((v) => v > 0);
   const ringR = ringRadii(ringValues, max, R);
   const arcs = labelArcs(n, R);
@@ -72,6 +86,7 @@ export function LifeWheel({
       size={SIZE}
       radii={radii}
       colors={colors}
+      ghostPath={ghostD}
       ariaLabel={ariaLabel}
       className={`mx-auto block w-full ${maxWidthClass} overflow-visible`}
       defs={arcs.map((a, i) => (

@@ -3,7 +3,8 @@
 import { RateView } from "@/components/RateView";
 import { useLocalToday } from "@/components/useLocalToday";
 import type { SaveResult } from "@/lib/data/day";
-import { PREVIEW_MAINS, PREVIEW_PREVIOUS, PREVIEW_SCORES } from "./fixtures";
+import { addDays } from "@/lib/date";
+import { PREVIEW_GHOST_SCORES, PREVIEW_MAINS, PREVIEW_SCORES } from "./fixtures";
 
 /** Stands in for saveRating: resolves after 200 ms, or rejects when the URL has ?fail=1. */
 function fakeSave(): Promise<SaveResult> {
@@ -13,7 +14,10 @@ function fakeSave(): Promise<SaveResult> {
   );
 }
 
-/** The real RateView fed fixtures for today; `unavailable` mimics a missing ratings table. */
+/**
+ * The real RateView fed fixtures for today, with a ghost (last rated day) two days
+ * earlier; `unavailable` mimics a missing ratings table (no scores, no ghost).
+ */
 export function RatePreview({ unavailable }: { unavailable: boolean }) {
   const today = useLocalToday();
   if (!today) return <p className="text-navy/60">Loading…</p>;
@@ -22,7 +26,7 @@ export function RatePreview({ unavailable }: { unavailable: boolean }) {
       day={today}
       mains={PREVIEW_MAINS}
       scores={unavailable ? {} : PREVIEW_SCORES}
-      previous={unavailable ? {} : PREVIEW_PREVIOUS}
+      ghost={unavailable ? null : { day: addDays(today, -2), scores: PREVIEW_GHOST_SCORES }}
       available={!unavailable}
       save={fakeSave}
     />

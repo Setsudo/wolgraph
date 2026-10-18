@@ -11,6 +11,7 @@ import {
   LABEL_MIN_SIZE,
   clampValue,
   fitLabels,
+  ghostPath,
   labelArcs,
   points,
   ringRadii,
@@ -336,5 +337,23 @@ describe("bridgeRadius", () => {
     expect(bridgeRadius({ x: C, y: C - R }, { x: C + R, y: C }, 225)).toBe(0);
     // Chord along the 0° ray itself.
     expect(bridgeRadius({ x: C, y: C - 10 }, { x: C, y: C - R }, 0)).toBe(0);
+  });
+});
+
+describe("ghostPath", () => {
+  it("is the valued path of the values, skipping null and missing ones", () => {
+    const values = [8, null, 9, 7, undefined, 0, 5, 3];
+    const radii = valueRadii(
+      values.map((v) => v ?? null),
+      10,
+      R,
+    );
+    expect(ghostPath(values, 10, R)).toBe(valuedPath(valuedPoints(radii)));
+    expect(ghostPath(values, 10, R).match(/[ML]/g)).toHaveLength(6);
+  });
+
+  it("is empty for fewer than two values", () => {
+    expect(ghostPath([null, 4, null], 10, R)).toBe("");
+    expect(ghostPath([], 10, R)).toBe("");
   });
 });

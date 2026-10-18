@@ -29,6 +29,8 @@ export type LifeWheelPlotProps = {
   /** Value radius per sector in viewBox units; null = no value (no dot, skipped by the shape). */
   radii: (number | null)[];
   colors?: string[];
+  /** Static dashed outline above the grid, below the outline and dots; never animated or hidden while pending. */
+  ghostPath?: string;
   ariaLabel: string;
   className: string;
   /** Drawn first (label arcs). */
@@ -49,6 +51,7 @@ export function LifeWheelPlot({
   size,
   radii,
   colors,
+  ghostPath,
   ariaLabel,
   className,
   defs,
@@ -108,6 +111,17 @@ export function LifeWheelPlot({
         {path && <path data-part="data" d={path} className="fill-teal" fillOpacity={0.4} />}
       </g>
       {grid}
+      {ghostPath && (
+        <path
+          data-part="ghost"
+          aria-hidden="true"
+          d={ghostPath}
+          className="fill-none stroke-navy/35"
+          strokeWidth={1.5}
+          strokeDasharray="4 4"
+          strokeLinejoin="round"
+        />
+      )}
       {/* Outline and dots above the grid, as in the reference. */}
       <g {...dataLayer}>
         {path && (

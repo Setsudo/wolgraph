@@ -45,17 +45,13 @@ beforeEach(() => vi.clearAllMocks());
 afterEach(() => vi.clearAllMocks());
 
 describe("getRatings", () => {
-  it("returns active mains, the day's scores and the latest earlier score per main", async () => {
+  it("returns active mains and the day's scores", async () => {
     let categoriesQuery: Query | null = null;
     createClient.mockResolvedValue(
       fakeClient((q) => {
         if (q.table === "categories") {
           categoriesQuery = q;
           return { data: MAINS, error: null };
-        }
-        if (has(q, "lt")) {
-          const id = eqValue(q, "category_id");
-          return { data: id === "health" ? [{ score: 3 }] : [], error: null };
         }
         return {
           data: [
@@ -70,7 +66,7 @@ describe("getRatings", () => {
     await expect(getRatings("2026-10-15")).resolves.toEqual({
       mains: MAINS,
       scores: { career: 8 },
-      previous: { health: 3 },
+      ghost: null,
       available: true,
     });
     expect(categoriesQuery!.filters).toEqual(
@@ -99,26 +95,79 @@ describe("getRatings", () => {
     ]);
   });
 
-  it("asks for the most recent score strictly before the day", async () => {
+  it("takes the day's scores only from the day's rows", async () => {
     const seen: Query[] = [];
     createClient.mockResolvedValue(
       fakeClient((q) => {
         seen.push(q);
-        return q.table === "categories" ? { data: MAINS, error: null } : { data: [], error: null };
+        if (q.table === "categories") return { data: MAINS, error: null };
+        if (has(q, "lt")) return { data: [{ day: "2026-10-12" }], error: null };
+        if (eqValue(q, "day") === "2026-10-12")
+          return { data: [{ category_id: "health", score: 6 }], error: null };
+        return { data: [{ category_id: "career", score: 3 }], error: null };
       }),
     );
-    await getRatings("2026-10-15");
-    const before = seen.filter((q) => has(q, "lt"));
-    expect(before).toHaveLength(2);
-    for (const q of before) {
-      expect(q.filters).toEqual(
-        expect.arrayContaining([
-          ["lt", "day", "2026-10-15"],
-          ["order", "day", { ascending: false }],
-          ["limit", 1],
-        ]),
-      );
-    }
+    const data = await getRatings("2026-10-15");
+    expect(data.scores).toEqual({ career: 3 });
+    const dayQuery = seen.find((q) => q.table === "ratings" && eqValue(q, "day") === "2026-10-15");
+    expect(dayQuery && has(dayQuery, "lt")).toBe(false);
+  });
+
+  it("returns the latest earlier rated day as the ghost, with its active mains' scores", async () => {
+    const seen: Query[] = [];
+    createClient.mockResolvedValue(
+      fakeClient((q) => {
+        seen.push(q);
+        if (q.table === "categories") return { data: MAINS, error: null };
+        if (has(q, "lt")) return { data: [{ day: "2026-10-12" }], error: null };
+        if (eqValue(q, "day") === "2026-10-12")
+          return {
+            data: [
+              { category_id: "health", score: 6 },
+              { category_id: "career", score: 9 },
+              { category_id: "archived-main", score: 2 },
+            ],
+            error: null,
+          };
+        return { data: [], error: null };
+      }),
+    );
+    await expect(getRatings("2026-10-15")).resolves.toEqual({
+      mains: MAINS,
+      scores: {},
+      ghost: { day: "2026-10-12", scores: { health: 6, career: 9 } },
+      available: true,
+    });
+    const ratings = seen.filter((q) => q.table === "ratings");
+    // The day, the latest earlier day, that day's rows: two ghost queries.
+    expect(ratings).toHaveLength(3);
+    const latest = ratings.find((q) => has(q, "lt"))!;
+    expect(latest.filters).toEqual(
+      expect.arrayContaining([
+        ["select", "day"],
+        ["eq", "user_id", "user-1"],
+        ["lt", "day", "2026-10-15"],
+        ["order", "day", { ascending: false }],
+        ["limit", 1],
+      ]),
+    );
+    const ghostRows = ratings.find((q) => eqValue(q, "day") === "2026-10-12")!;
+    expect(eqValue(ghostRows, "user_id")).toBe("user-1");
+  });
+
+  it("has no ghost when no earlier day was rated", async () => {
+    const seen: Query[] = [];
+    createClient.mockResolvedValue(
+      fakeClient((q) => {
+        seen.push(q);
+        if (q.table === "categories") return { data: MAINS, error: null };
+        return { data: [], error: null };
+      }),
+    );
+    const data = await getRatings("2026-10-15");
+    expect(data.ghost).toBeNull();
+    // No query for a ghost day's rows.
+    expect(seen.filter((q) => q.table === "ratings")).toHaveLength(2);
   });
 
   it.each([
@@ -134,7 +183,21 @@ describe("getRatings", () => {
     await expect(getRatings("2026-10-15")).resolves.toEqual({
       mains: MAINS,
       scores: {},
-      previous: {},
+      ghost: null,
+      available: false,
+    });
+  });
+
+  it("treats a missing table on the earlier-day query as a missing table (no ghost)", async () => {
+    createClient.mockResolvedValue(
+      fakeClient((q) => {
+        if (q.table === "categories") return { data: MAINS, error: null };
+        if (has(q, "lt")) return { data: null, error: { code: "42P01", message: "gone" } };
+        return { data: [], error: null };
+      }),
+    );
+    await expect(getRatings("2026-10-15")).resolves.toMatchObject({
+      ghost: null,
       available: false,
     });
   });

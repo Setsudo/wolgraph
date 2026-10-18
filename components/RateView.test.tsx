@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { PREVIEW_MAINS, PREVIEW_PREVIOUS, PREVIEW_SCORES } from "@/app/dev/rate-preview/fixtures";
+import { PREVIEW_MAINS, PREVIEW_SCORES } from "@/app/dev/rate-preview/fixtures";
 import type { SaveRating } from "@/lib/data/ratings";
 import { addDays, todayLocal } from "@/lib/date";
 import { SAVE_FAILED_MESSAGE } from "./DayView";
@@ -24,7 +24,6 @@ function renderRate(save: SaveRating, available = true, day = DAY) {
       day={day}
       mains={PREVIEW_MAINS}
       scores={PREVIEW_SCORES}
-      previous={PREVIEW_PREVIOUS}
       available={available}
       save={save}
     />,
@@ -39,17 +38,87 @@ const move = (name: string, v: number) =>
   fireEvent.change(slider(name), { target: { value: String(v) } });
 
 describe("RateView", () => {
-  it("shows today's score, else the previous one, else 5, on sliders and wheel", () => {
+  it("shows the day's score, else 0, on sliders and wheel", () => {
     renderRate(vi.fn<SaveRating>());
-    expect(value("Health")).toBe("8"); // today (previous was 6)
-    expect(value("Career")).toBe("2"); // previous
-    expect(value("Relaxation")).toBe("0"); // previous 0 is kept
-    expect(value("Personal Growth")).toBe("5"); // neither
+    expect(value("Health")).toBe("8");
+    expect(value("Career")).toBe("0");
+    expect(value("Personal Growth")).toBe("0");
     expect(screen.getByRole("img").getAttribute("aria-label")).toBe(
-      "Life ratings: Health 8, Personal Growth 5, Finance 9, Family 7, Career 2, Relaxation 0, Relationships 5, Spirituality 3",
+      "Life ratings: Health 8, Personal Growth 0, Finance 9, Family 7, Career 0, Relaxation 0, Relationships 0, Spirituality 0",
     );
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Wheel of Life");
     expect(screen.getByText("Thu, Oct 15")).toBeTruthy();
+  });
+
+  it("starts a day with no scores at 0 on every slider and saves nothing until one moves", async () => {
+    // getRatings returns only the day's scores; earlier days' scores never reach the view.
+    const save = vi.fn<SaveRating>().mockResolvedValue({ ok: true });
+    render(<RateView day={DAY} mains={PREVIEW_MAINS} scores={{}} available save={save} />);
+    for (const m of PREVIEW_MAINS) expect(value(m.name)).toBe("0");
+    expect(screen.getByRole("img").getAttribute("aria-label")).toBe(
+      `Life ratings: ${PREVIEW_MAINS.map((m) => `${m.name} 0`).join(", ")}`,
+    );
+    await act(async () => vi.advanceTimersByTime(1000));
+    expect(save).not.toHaveBeenCalled();
+    move("Career", 6);
+    await act(async () => vi.advanceTimersByTime(400));
+    expect(save.mock.calls).toEqual([["career", DAY, 6]]);
+  });
+
+  describe("ghost (last rated day)", () => {
+    const GHOST = {
+      day: "2026-10-12",
+      scores: { health: 3, career: 9, relaxation: 6, "personal-growth": 4 },
+    };
+
+    it("captions the dashed outline with its day, and draws it on the wheel", () => {
+      const { container } = render(
+        <RateView
+          day={DAY}
+          mains={PREVIEW_MAINS}
+          scores={PREVIEW_SCORES}
+          ghost={GHOST}
+          available
+          save={vi.fn<SaveRating>()}
+        />,
+      );
+      const caption = screen.getByText("Dashed outline: Mon, Oct 12");
+      expect(caption.className).toContain("text-[13px]");
+      expect(caption.className).toContain("text-navy/50");
+      const ghost = container.querySelectorAll('[data-part="ghost"]');
+      expect(ghost).toHaveLength(1);
+      // Unrated mains in the ghost are skipped: 4 valued vertices.
+      expect(ghost[0].getAttribute("d")!.match(/[ML]/g)).toHaveLength(4);
+    });
+
+    it("has no caption and no outline without a ghost", () => {
+      const { container } = renderRate(vi.fn<SaveRating>());
+      expect(screen.queryByText(/Dashed outline/)).toBeNull();
+      expect(container.querySelectorAll('[data-part="ghost"]')).toHaveLength(0);
+    });
+
+    it("never pre-fills a slider or the wheel's values, and saves nothing on render", async () => {
+      const save = vi.fn<SaveRating>().mockResolvedValue({ ok: true });
+      render(
+        <RateView
+          day={DAY}
+          mains={PREVIEW_MAINS}
+          scores={{ health: 8 }}
+          ghost={GHOST}
+          available
+          save={save}
+        />,
+      );
+      expect(value("Health")).toBe("8");
+      expect(value("Career")).toBe("0");
+      expect(value("Relaxation")).toBe("0");
+      expect(value("Personal Growth")).toBe("0");
+      expect(screen.getByRole("img").getAttribute("aria-label")).toBe(
+        "Life ratings: Health 8, Personal Growth 0, Finance 0, Family 0, Career 0, Relaxation 0, Relationships 0, Spirituality 0",
+      );
+      await act(async () => vi.advanceTimersByTime(2000));
+      expect(save).not.toHaveBeenCalled();
+    });
   });
 
   it("colours the wheel's dots and the sliders by category", () => {
@@ -86,7 +155,6 @@ describe("RateView", () => {
         day="2020-03-01"
         mains={PREVIEW_MAINS}
         scores={{}}
-        previous={{}}
         available
         save={vi.fn<SaveRating>()}
         onNavigate={onNavigate}
@@ -162,7 +230,7 @@ describe("RateView", () => {
     move("Personal Growth", 9);
     expect(value("Personal Growth")).toBe("9");
     await act(async () => vi.advanceTimersByTime(400));
-    expect(value("Personal Growth")).toBe("5");
+    expect(value("Personal Growth")).toBe("0");
     expect(screen.getByRole("alert").textContent).toBe(SAVE_FAILED_MESSAGE);
     await act(async () => vi.advanceTimersByTime(4000));
     expect(screen.queryByRole("alert")).toBeNull();
@@ -191,7 +259,6 @@ describe("RateView", () => {
         day={DAY}
         mains={PREVIEW_MAINS}
         scores={{ ...PREVIEW_SCORES, career: 7 }}
-        previous={PREVIEW_PREVIOUS}
         available
         save={save}
       />,
@@ -223,19 +290,12 @@ describe("RateView", () => {
   it("renders with fewer than 3 mains, and with none", () => {
     const save = vi.fn<SaveRating>();
     const { rerender } = render(
-      <RateView
-        day={DAY}
-        mains={PREVIEW_MAINS.slice(0, 2)}
-        scores={{}}
-        previous={{}}
-        available
-        save={save}
-      />,
+      <RateView day={DAY} mains={PREVIEW_MAINS.slice(0, 2)} scores={{}} available save={save} />,
     );
     expect(list().getAllByRole("slider")).toHaveLength(2);
     expect(within(screen.getByTestId("rate-right")).getAllByRole("slider")).toHaveLength(1);
     expect(within(screen.getByTestId("rate-left")).getAllByRole("slider")).toHaveLength(1);
-    rerender(<RateView day={DAY} mains={[]} scores={{}} previous={{}} available save={save} />);
+    rerender(<RateView day={DAY} mains={[]} scores={{}} available save={save} />);
     expect(screen.queryAllByRole("slider")).toHaveLength(0);
     expect(screen.getByRole("img").getAttribute("aria-label")).toBe("Life ratings: ");
   });

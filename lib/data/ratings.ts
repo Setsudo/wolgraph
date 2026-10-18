@@ -5,13 +5,19 @@ import { createClient } from "@/lib/supabase/server";
 /** An active main category as the rate screen needs it. */
 export type RateMain = { id: string; name: string; color: string };
 
+/** The most recent earlier day with any ratings: shown faintly behind today's shape, never saved. */
+export type RatingsGhost = { day: string; scores: Record<string, number> };
+
 export type RatingsData = {
   /** Active main categories, ordered by sort_order then name. */
   mains: RateMain[];
   /** The day's score per main category id. */
   scores: Record<string, number>;
-  /** Per main category id, its most recent score before the day. */
-  previous: Record<string, number>;
+  /**
+   * The latest day before `day` with any rating rows, with its scores for active mains.
+   * Display only: never a slider's value. null when there is none or the table is missing.
+   */
+  ghost: RatingsGhost | null;
   /** False when the ratings table is missing (0002_ratings.sql not applied yet). */
   available: boolean;
 };
@@ -35,8 +41,8 @@ class MissingTable extends Error {}
 
 /**
  * The signed-in user's active main categories with their scores for `day`
- * (YYYY-MM-DD) and the most recent score before it. Server only. If the
- * ratings table does not exist yet, returns no scores and `available: false`.
+ * (YYYY-MM-DD), plus the latest earlier rated day as `ghost`. Server only. If the
+ * ratings table does not exist yet, returns no scores, no ghost and `available: false`.
  */
 export async function getRatings(day: string): Promise<RatingsData> {
   const supabase = await createClient();
@@ -60,39 +66,46 @@ export async function getRatings(day: string): Promise<RatingsData> {
     if (error) throw new Error(`Could not load ${what}: ${error.message}`);
   };
 
-  try {
-    const [today, ...before] = await Promise.all([
-      supabase.from("ratings").select("category_id, score").eq("user_id", userId).eq("day", day),
-      // One indexed lookup per main (primary key user_id, category_id, day).
-      ...mains.map((m) =>
-        supabase
-          .from("ratings")
-          .select("score")
-          .eq("user_id", userId)
-          .eq("category_id", m.id)
-          .lt("day", day)
-          .order("day", { ascending: false })
-          .limit(1),
-      ),
-    ]);
+  const ids = new Set(mains.map((m) => m.id));
+  const activeScores = (rows: { category_id: string; score: number }[] | null) => {
+    const out: Record<string, number> = {};
+    for (const r of rows ?? []) if (ids.has(r.category_id)) out[r.category_id] = Number(r.score);
+    return out;
+  };
 
+  try {
+    const [today, latest] = await Promise.all([
+      supabase.from("ratings").select("category_id, score").eq("user_id", userId).eq("day", day),
+      // The most recent earlier day with any rating rows (the ghost's day).
+      supabase
+        .from("ratings")
+        .select("day")
+        .eq("user_id", userId)
+        .lt("day", day)
+        .order("day", { ascending: false })
+        .limit(1),
+    ]);
     check(today.error, "ratings");
-    const ids = new Set(mains.map((m) => m.id));
-    const scores: Record<string, number> = {};
-    for (const r of today.data ?? []) {
-      if (ids.has(r.category_id)) scores[r.category_id] = Number(r.score);
+    check(latest.error, "earlier ratings");
+    const scores = activeScores(today.data);
+
+    const ghostDay = latest.data?.[0]?.day;
+    let ghost: RatingsGhost | null = null;
+    if (ghostDay) {
+      const rows = await supabase
+        .from("ratings")
+        .select("category_id, score")
+        .eq("user_id", userId)
+        .eq("day", ghostDay);
+      check(rows.error, "earlier ratings");
+      const ghostScores = activeScores(rows.data);
+      // Only archived categories rated that day: nothing to outline, so no caption either.
+      if (Object.keys(ghostScores).length > 0) ghost = { day: ghostDay, scores: ghostScores };
     }
 
-    const previous: Record<string, number> = {};
-    before.forEach((result, i) => {
-      check(result.error, "previous ratings");
-      const row = result.data?.[0];
-      if (row) previous[mains[i].id] = Number(row.score);
-    });
-
-    return { mains, scores, previous, available: true };
+    return { mains, scores, ghost, available: true };
   } catch (error) {
-    if (error instanceof MissingTable) return { mains, scores: {}, previous: {}, available: false };
+    if (error instanceof MissingTable) return { mains, scores: {}, ghost: null, available: false };
     throw error;
   }
 }
