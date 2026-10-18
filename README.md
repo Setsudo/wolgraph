@@ -44,3 +44,7 @@ npm run dev                  # http://localhost:3000
 | `npm run build` | Production build |
 
 Dev-only previews with fixture data (no sign-in, 404 in production): `/dev/rate-preview`, `/dev/day-preview`, `/dev/trends-preview`, `/dev/categories-preview`.
+
+## License
+
+[MIT](LICENSE)

@@ -1,6 +1,7 @@
 # filemap
 
 - `README.md` — setup (Supabase, Vercel, local) and commands
+- `LICENSE` — MIT
 - `CLAUDE.md` — agent conventions and commands; keep under 60 lines
 - `docs/SPEC.md` — MVP scope, data model, design decisions; change only with owner approval
 - `docs/PLAN.md` — task list and status; tick tasks as they are accepted
