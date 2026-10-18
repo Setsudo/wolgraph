@@ -240,6 +240,51 @@ describe("LifeWheel", () => {
     expect(all(none, "spoke")).toHaveLength(8);
   });
 
+  describe("ghost", () => {
+    it("draws a dashed, unfilled, aria-hidden outline with no dots of its own", () => {
+      const c = wheel({ values: [8, 5, 9, 7, 2, 0, 5, 3], ghost: [6, 7, 5, 9, 6, 4, 8, 5] });
+      const ghost = all(c, "ghost");
+      expect(ghost).toHaveLength(1);
+      expect(ghost[0].tagName).toBe("path");
+      expect(ghost[0].getAttribute("stroke-dasharray")).toBe("4 4");
+      expect(ghost[0].getAttribute("stroke-width")).toBe("1.5");
+      expect(ghost[0].getAttribute("stroke-linejoin")).toBe("round");
+      expect(ghost[0].getAttribute("aria-hidden")).toBe("true");
+      expect(ghost[0].getAttribute("class")).toContain("fill-none");
+      expect(ghost[0].getAttribute("class")).toContain("stroke-navy/35");
+      expect(ghost[0].getAttribute("d")!.match(/[ML]/g)).toHaveLength(8);
+      // Dots belong to the values only.
+      expect(all(c, "dot")).toHaveLength(8);
+      // Never part of the pending (motion-gated) data layer.
+      expect(ghost[0].closest("[data-lifewheel-data]")).toBeNull();
+    });
+
+    it("sits above the grid and below the outline and dots", () => {
+      const c = wheel({ ghost: [6, 7, 5, 9, 6, 4, 8, 5] });
+      const order = [...c.querySelectorAll("[data-part]")].map((e) => e.getAttribute("data-part"));
+      expect(order.indexOf("ghost")).toBeGreaterThan(order.indexOf("boundary"));
+      expect(order.indexOf("ghost")).toBeLessThan(order.indexOf("data-outline"));
+      expect(order.indexOf("ghost")).toBeLessThan(order.indexOf("dot"));
+    });
+
+    it("skips null ghost values like null values", () => {
+      const c = wheel({ ghost: [6, null, 5, 9, null, 4, 8, 5] });
+      expect(all(c, "ghost")[0].getAttribute("d")!.match(/[ML]/g)).toHaveLength(6);
+    });
+
+    it("is absent without the prop, and the rest renders the same", () => {
+      const plain = wheel();
+      expect(all(plain, "ghost")).toHaveLength(0);
+      // useId differs between renders; compare everything else.
+      const html = (c: HTMLElement) => c.innerHTML.replace(/_r_[a-z0-9]+_/g, "ID");
+      const plainHtml = html(plain);
+      cleanup();
+      const withGhost = wheel({ ghost: [6, 7, 5, 9, 6, 4, 8, 5] });
+      all(withGhost, "ghost")[0].remove();
+      expect(html(withGhost)).toBe(plainHtml);
+    });
+  });
+
   it("server render draws the final state", () => {
     const html = renderToString(
       <LifeWheel
@@ -312,6 +357,20 @@ describe("LifeWheel", () => {
       expect(dots).toHaveLength(7);
       expect(dist(dots[0])).toBeCloseTo(230, 1);
       for (const d of dots) expect(d.getAttribute("transform")).toBeNull();
+    });
+
+    it("shows the ghost at once, unanimated, while the data layer is still pending", () => {
+      browser(false);
+      const c = wheel({
+        values: [10, 10, 10, 10, 10, 10, 10, 10],
+        ghost: [5, 5, 5, 5, 5, 5, 5, 5],
+      });
+      expect(c.querySelectorAll("[data-pending]")).toHaveLength(2);
+      const before = all(c, "ghost")[0].getAttribute("d");
+      expect(before).toBeTruthy();
+      frame(0);
+      frame(STAGGER_MS + 100);
+      expect(all(c, "ghost")[0].getAttribute("d")).toBe(before);
     });
 
     it("pops points in from the centre on mount, staggered, then settles", () => {

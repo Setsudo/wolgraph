@@ -257,3 +257,22 @@ export function bridgeRadius(
   if (!(r > 0) || s < -1e-9 || s > 1 + 1e-9) return 0;
   return r;
 }
+
+/**
+ * Path of a display-only shape (the Rate screen's last rated day) for values
+ * on 0..max, one per sector (n = values.length): null or missing values are
+ * skipped like nulls in the data shape. "" when fewer than 2 are valued.
+ */
+export function ghostPath(
+  values: (number | null | undefined)[],
+  max: number,
+  radius: number,
+  size: number = LIFEWHEEL_SIZE,
+): string {
+  const radii = valueRadii(
+    values.map((v) => (v === undefined || v === null || !Number.isFinite(v) ? null : v)),
+    max,
+    radius,
+  );
+  return valuedPath(valuedPoints(radii, size));
+}

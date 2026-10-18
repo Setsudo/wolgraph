@@ -14,7 +14,7 @@ async function RateContent({ searchParams }: { searchParams: SearchParams }) {
   const { day } = await searchParams;
   // ?day is the day to rate; RateTodayGate fills in the local today and turns away later days.
   if (!isValidDay(day) || day > latestDayAnywhere(new Date())) return <RateTodayGate day={null} />;
-  const { mains, scores, available } = await getRatings(day);
+  const { mains, scores, ghost, available } = await getRatings(day);
   return (
     <RateTodayGate day={day}>
       <RateView
@@ -22,6 +22,7 @@ async function RateContent({ searchParams }: { searchParams: SearchParams }) {
         day={day}
         mains={mains}
         scores={scores}
+        ghost={ghost}
         available={available}
         save={saveRating}
       />

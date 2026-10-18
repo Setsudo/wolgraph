@@ -15,3 +15,14 @@ export const PREVIEW_MAINS: RateMain[] = [
 /** Today's scores: three categories already rated today; the rest show 0. */
 export const PREVIEW_SCORES: Record<string, number> = { health: 8, finance: 9, family: 7 };
 
+/** The last rated day's scores (two days before today in the preview): drawn as the dashed outline. */
+export const PREVIEW_GHOST_SCORES: Record<string, number> = {
+  health: 6,
+  "personal-growth": 7,
+  finance: 5,
+  family: 9,
+  career: 6,
+  relaxation: 4,
+  relationships: 8,
+  spirituality: 5,
+};

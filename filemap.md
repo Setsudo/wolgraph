@@ -43,12 +43,12 @@
 - `lib/data/categories.ts` (+ test) — server category data access: `listCategories` and mutations (RLS, error mapping)
 - `lib/data/aggregates.ts` — per-period totals and per-day averages per main category
 - `lib/radar/geometry.ts` — trend scale helpers (`scaleMax`, `ringSteps`) and `polygonPath`
-- `lib/lifewheel/geometry.ts` — pure life-wheel geometry: sector spokes and centres, value points (null values skipped, `valuedPath`, `bridgeRadius`), ring radii, label arcs
+- `lib/lifewheel/geometry.ts` — pure life-wheel geometry: sector spokes and centres, value points (null values skipped, `valuedPath`, `bridgeRadius`), `ghostPath` (display-only dashed outline), ring radii, label arcs
 - `lib/lifewheel/motion.ts` (+ test) — pure point motion for the life wheel: pop-in, glide, retract-to-bridge tracks and easing
 - `lib/data/ratingAggregates.ts` (+ test) — `withRatings`: per-main average 0-10 rating for a period on top of the hours aggregate, `ratingsEmpty`, `ratingsAvailable`
 - `lib/data/trends.ts` (+ test) — `getTrendData(period)`: server-side load of categories and period entries and ratings, aggregated (missing ratings table: `ratingsAvailable: false`)
 - `lib/trends/format.ts` — trends period labels, hour formatting, `?kind&anchor` parsing and hrefs
-- `components/LifeWheel.tsx` — generic reference-style wheel chart (labels, values on 0..max or null, rings, optional category-coloured dots); server-safe, used by Trends and Rate
+- `components/LifeWheel.tsx` — generic reference-style wheel chart (labels, values on 0..max or null, rings, optional category-coloured dots, optional static dashed `ghost` outline); server-safe, used by Trends and Rate
 - `components/LifeWheelPlot.tsx` — client SVG shell of LifeWheel: animates the value shape and dots with rAF (final state on the server and with reduced motion)
 - `components/trends/` — trends screen: `TrendsView` (shared tree), `PeriodControls` (client toggle and arrows), `TrendsBody` (Time and Rating wheels), `TotalsTable` (incl. avg rating), `CanonicalizeTrendsUrl` (client redirect to today)
 - `app/dev/trends-preview/` — dev-only trends preview with fixture hours and ratings (`?kind&anchor&empty=1&few=1&subs=1`); 404 in production
@@ -67,10 +67,10 @@
 - `supabase/migrations/0002_ratings.sql` — `ratings` table (0-10 per main category per day), main-only trigger, RLS
 - `app/(app)/rate/page.tsx` — Rate your life screen (home): reads `?day` (browser-local today or an earlier day), loads ratings, renders `RateView`
 - `app/(app)/rate/actions.ts` (+ test) — `saveRating` Server Action (0-10 integer, future-day guard, upsert, revalidates `/rate`)
-- `lib/data/ratings.ts` (+ test) — `getRatings(day)`: active mains, the day's scores, `available` (false when the table is missing)
+- `lib/data/ratings.ts` (+ test) — `getRatings(day)`: active mains, the day's scores, `ghost` (latest earlier rated day's scores, display only), `available` (false when the table is missing)
 - `lib/rate/layout.ts` (+ test) — `sideOrder(n)`: which mains go in the left and right slider columns
 - `lib/rate/score.ts` (+ test) — score range, `isValidScore`, `displayedScore` (the day's score, else 0)
-- `components/RateView.tsx` (+ test) — rate screen client: previous/next day arrows, category-coloured wheel and sliders, optimistic debounced saves, rollback toast, missing-table notice
+- `components/RateView.tsx` (+ test) — rate screen client: previous/next day arrows, category-coloured wheel and sliders, dashed outline of the last rated day with caption, optimistic debounced saves, rollback toast, missing-table notice
 - `components/RatingSlider.tsx` (+ test) — 0-10 range slider with tick numbers, a value box under the thumb and an optional category colour
 - `components/RateTodayGate.tsx` (+ test) — sends `/rate` with no, invalid or future `?day` to `/rate?day=<browser-local today>`; today and past days render
-- `app/dev/rate-preview/` — dev-only rate screen preview with fixtures and a fake save (`?unavailable=1`, `?fail=1`); 404 in production
+- `app/dev/rate-preview/` — dev-only rate screen preview with fixtures (incl. a ghost day two days back) and a fake save (`?unavailable=1`, `?fail=1`); 404 in production

@@ -65,6 +65,62 @@ describe("RateView", () => {
     expect(save.mock.calls).toEqual([["career", DAY, 6]]);
   });
 
+  describe("ghost (last rated day)", () => {
+    const GHOST = {
+      day: "2026-10-12",
+      scores: { health: 3, career: 9, relaxation: 6, "personal-growth": 4 },
+    };
+
+    it("captions the dashed outline with its day, and draws it on the wheel", () => {
+      const { container } = render(
+        <RateView
+          day={DAY}
+          mains={PREVIEW_MAINS}
+          scores={PREVIEW_SCORES}
+          ghost={GHOST}
+          available
+          save={vi.fn<SaveRating>()}
+        />,
+      );
+      const caption = screen.getByText("Dashed outline: Mon, Oct 12");
+      expect(caption.className).toContain("text-[13px]");
+      expect(caption.className).toContain("text-navy/50");
+      const ghost = container.querySelectorAll('[data-part="ghost"]');
+      expect(ghost).toHaveLength(1);
+      // Unrated mains in the ghost are skipped: 4 valued vertices.
+      expect(ghost[0].getAttribute("d")!.match(/[ML]/g)).toHaveLength(4);
+    });
+
+    it("has no caption and no outline without a ghost", () => {
+      const { container } = renderRate(vi.fn<SaveRating>());
+      expect(screen.queryByText(/Dashed outline/)).toBeNull();
+      expect(container.querySelectorAll('[data-part="ghost"]')).toHaveLength(0);
+    });
+
+    it("never pre-fills a slider or the wheel's values, and saves nothing on render", async () => {
+      const save = vi.fn<SaveRating>().mockResolvedValue({ ok: true });
+      render(
+        <RateView
+          day={DAY}
+          mains={PREVIEW_MAINS}
+          scores={{ health: 8 }}
+          ghost={GHOST}
+          available
+          save={save}
+        />,
+      );
+      expect(value("Health")).toBe("8");
+      expect(value("Career")).toBe("0");
+      expect(value("Relaxation")).toBe("0");
+      expect(value("Personal Growth")).toBe("0");
+      expect(screen.getByRole("img").getAttribute("aria-label")).toBe(
+        "Life ratings: Health 8, Personal Growth 0, Finance 0, Family 0, Career 0, Relaxation 0, Relationships 0, Spirituality 0",
+      );
+      await act(async () => vi.advanceTimersByTime(2000));
+      expect(save).not.toHaveBeenCalled();
+    });
+  });
+
   it("colours the wheel's dots and the sliders by category", () => {
     const { container } = renderRate(vi.fn<SaveRating>());
     const dots = [...container.querySelectorAll('[data-part="dot"]')];

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { RateMain, SaveRating } from "@/lib/data/ratings";
+import type { RateMain, RatingsGhost, SaveRating } from "@/lib/data/ratings";
 import { addDays, formatDayLabel } from "@/lib/date";
 import { sideOrder } from "@/lib/rate/layout";
 import { displayedScore } from "@/lib/rate/score";
@@ -20,6 +20,8 @@ type RateViewProps = {
   day: string;
   mains: RateMain[];
   scores: Record<string, number>;
+  /** The last earlier rated day: a dashed outline on the wheel only, never a slider value or a save. */
+  ghost?: RatingsGhost | null;
   /** False when the ratings table is missing: sliders still move, nothing is sent. */
   available: boolean;
   save: SaveRating;
@@ -30,7 +32,15 @@ type RateViewProps = {
 type Scores = Record<string, number>;
 
 /** "Rate your life" (SPEC §10): one 0-10 slider per main category around the wheel. */
-export function RateView({ day, mains, scores, available, save, onNavigate }: RateViewProps) {
+export function RateView({
+  day,
+  mains,
+  scores,
+  ghost = null,
+  available,
+  save,
+  onNavigate,
+}: RateViewProps) {
   const router = useRouter();
   const today = useLocalToday();
   const goTo = (to: string) => (onNavigate ? onNavigate(to) : router.push(`/rate?day=${to}`));
@@ -187,6 +197,11 @@ export function RateView({ day, mains, scores, available, save, onNavigate }: Ra
           ›
         </button>
       </div>
+      {ghost && (
+        <p className="text-center text-[13px] text-navy/50">
+          Dashed outline: {formatDayLabel(ghost.day)}
+        </p>
+      )}
       {!available && (
         <p className="mt-2 text-center text-[14px] text-amber">{UNAVAILABLE_NOTICE}</p>
       )}
@@ -202,6 +217,7 @@ export function RateView({ day, mains, scores, available, save, onNavigate }: Ra
             labels={mains.map((m) => m.name)}
             colors={mains.map((m) => m.color)}
             values={values}
+            ghost={ghost ? mains.map((m) => ghost.scores[m.id] ?? null) : undefined}
             max={10}
             maxWidthClass="max-w-[720px]"
             rings={RINGS}
