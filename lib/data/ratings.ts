@@ -98,7 +98,9 @@ export async function getRatings(day: string): Promise<RatingsData> {
         .eq("user_id", userId)
         .eq("day", ghostDay);
       check(rows.error, "earlier ratings");
-      ghost = { day: ghostDay, scores: activeScores(rows.data) };
+      const ghostScores = activeScores(rows.data);
+      // Only archived categories rated that day: nothing to outline, so no caption either.
+      if (Object.keys(ghostScores).length > 0) ghost = { day: ghostDay, scores: ghostScores };
     }
 
     return { mains, scores, ghost, available: true };
