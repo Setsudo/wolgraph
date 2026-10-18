@@ -38,6 +38,7 @@ npm run dev                  # http://localhost:3000
 |---|---|
 | `npm run dev` | Dev server |
 | `npm run lint`, `npm run typecheck` | ESLint, `tsc --noEmit` |
+| `npm run format`, `npm run format:check` | Prettier write, Prettier check (CI runs the check) |
 | `npm test` | Vitest: geometry, aggregation, components, and SQL/RLS tests in PGlite (no Supabase needed) |
 | `npm run e2e` | Playwright smoke tests |
 | `npm run build` | Production build |

@@ -4,7 +4,7 @@ Next.js 16 (App Router) + TypeScript strict + Tailwind 4 + Supabase (Postgres, A
 
 ## Commands
 - Dev: `npm run dev`
-- Lint / types: `npm run lint`, `npm run typecheck`
+- Lint / types / format: `npm run lint`, `npm run typecheck`, `npm run format:check`
 - Unit tests: `npm test` (Vitest; SQL tests run migrations in PGlite)
 - E2E: `npm run e2e` (Playwright; needs `.env.local` Supabase credentials)
 - Build: `npm run build`
