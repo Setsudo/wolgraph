@@ -27,13 +27,14 @@
 - `app/dev/categories-preview/` — dev-only preview of the Categories screen with fixtures and fake actions (`?subs=1`: 3 and 10 subs, archived sub); 404 in production
 - `lib/date.ts` — local-date helpers (`todayLocal`)
 - `app/(app)/day/[date]/page.tsx` — daily entry screen (validates the date, loads the day, renders `DayView`)
-- `app/(app)/day/[date]/actions.ts` (+ test) — `saveEntry` Server Action (future-day guard, upsert or delete at 0 h, revalidates the day path)
+- `app/(app)/day/[date]/actions.ts` (+ test, `copy.test.ts`) — `saveEntry` Server Action (future-day guard, upsert or delete at 0 h, revalidates the day path); `copyPreviousDay` (explicit tap only: inserts the previous day's active entries, never overwrites)
 - `app/(app)/trends/page.tsx`, `app/(app)/categories/page.tsx` — app screens (placeholders)
 - `lib/date.ts` — local-date helpers (`todayLocal`, `isValidDay`, `addDays`, `formatDayLabel`)
 - `lib/hours.ts` — hour validation, stepper clamping and formatting
+- `lib/day/copy.ts` (+ test) — "Copy previous day" rules: copyable entries (active categories), when the button is offered (empty, editable, nothing saving), labels
 - `lib/wheel/geometry.ts` — pure two-ring wheel layout, SVG paths, hit testing, fill opacity
 - `lib/wheel/model.ts` — day-wheel view model (titles, aria-labels, fill hours), hours-panel rows per main (`mainPanel`), day total, arrow-key navigation between mains
-- `lib/data/day.ts` (+ test) — `getDay(date)` (active categories + the day's entries) and day-screen types
+- `lib/data/day.ts` (+ test) — `getDay(date)` (active categories, the day's entries, the previous day's copyable entries) and day-screen types
 - `supabase/migrations/` — SQL migrations (schema, RLS, seed); add new files, never edit applied ones
 - `supabase/test/auth_stub.sql` — stub `auth` schema and roles so migrations run in PGlite tests
 - `lib/data/types.ts` — `Database` and row types matching the migrations
@@ -59,11 +60,11 @@
 - `app/(auth)/login/LoginForm.tsx` — client login form (states: default, sending, sent, error)
 - `components/SignOutButton.tsx` — nav sign-out
 - `e2e/smoke.spec.ts` — credential-free smoke tests
-- `components/DayView.tsx` — day screen client: header navigation, optimistic debounced saves, rollback toast
+- `components/DayView.tsx` — day screen client: header navigation, optimistic debounced saves, rollback toast, "Copy yesterday's hours" button on an empty day with Undo
 - `components/Wheel.tsx` — SVG day wheel, single tab stop with arrow-key navigation between mains; outer sub ring is display only
 - `components/HourSheet.tsx` — hours stepper (one row per category for a main with subs): bottom sheet on phones, side panel from 768px
 - `components/useLocalToday.ts` — browser-local today (null during SSR)
-- `app/dev/day-preview/` — dev-only day screen preview with fixtures and a fake save (`?fail=1`, `?subs=1`: 3 and 10 subs, archived sub with hours); 404 in production
+- `app/dev/day-preview/` — dev-only day screen preview with fixtures and a fake save (`?fail=1`, `?subs=1`: 3 and 10 subs, archived sub with hours; `?copy=1`: empty today with the copy button); 404 in production
 - `supabase/migrations/0002_ratings.sql` — `ratings` table (0-10 per main category per day), main-only trigger, RLS
 - `app/(app)/rate/page.tsx` — Rate your life screen (home): reads `?day` (browser-local today or an earlier day), loads ratings, renders `RateView`
 - `app/(app)/rate/actions.ts` (+ test) — `saveRating` Server Action (0-10 integer, future-day guard, upsert, revalidates `/rate`)

@@ -23,7 +23,7 @@ Wheel = how each area feels (0-10 score), Day = where the time went (hours). Sam
 11. [x] Subcategories on the wheel: end-to-end check and fixes (add subs, log against them, trends roll-up).
     - Found: outer ring breaks the 44 px tap target from 3 subs per main (15 deg, ~37 px at 390 px); at 10 subs no names fit and hours overlap. Needs a design call (item 11a).
 11a. [x] Crowded outer ring: subcategories are edited in the hours panel (owner choice 2026-10-16); outer ring is display only.
-12. [ ] Copy yesterday's hours onto today in one tap.
+12. [x] Copy yesterday's hours onto today in one tap. Explicit tap only, never a default: the button shows only on an empty editable day, never overwrites an entry, and the confirmation has Undo.
 13. [ ] Weekly target per category, shown on the radar and totals. Schema change: needs approval.
 14. [ ] Year view on Trends.
 

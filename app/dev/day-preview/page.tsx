@@ -5,11 +5,11 @@ import { DayPreview } from "./DayPreview";
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 async function Preview({ searchParams }: { searchParams: SearchParams }) {
-  const { subs } = await searchParams;
-  return <DayPreview subs={subs === "1"} />;
+  const { subs, copy } = await searchParams;
+  return <DayPreview subs={subs === "1"} copy={copy === "1"} />;
 }
 
-/** Development-only preview of the daily entry screen with fixture data and a fake save (?fail=1, ?subs=1). */
+/** Development-only preview of the daily entry screen with fixture data and a fake save (?fail=1, ?subs=1, ?copy=1). */
 export default function DayPreviewPage({ searchParams }: { searchParams: SearchParams }) {
   if (process.env.NODE_ENV === "production") notFound();
   return (
