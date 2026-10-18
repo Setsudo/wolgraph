@@ -45,17 +45,13 @@ beforeEach(() => vi.clearAllMocks());
 afterEach(() => vi.clearAllMocks());
 
 describe("getRatings", () => {
-  it("returns active mains, the day's scores and the latest earlier score per main", async () => {
+  it("returns active mains and the day's scores", async () => {
     let categoriesQuery: Query | null = null;
     createClient.mockResolvedValue(
       fakeClient((q) => {
         if (q.table === "categories") {
           categoriesQuery = q;
           return { data: MAINS, error: null };
-        }
-        if (has(q, "lt")) {
-          const id = eqValue(q, "category_id");
-          return { data: id === "health" ? [{ score: 3 }] : [], error: null };
         }
         return {
           data: [
@@ -70,7 +66,6 @@ describe("getRatings", () => {
     await expect(getRatings("2026-10-15")).resolves.toEqual({
       mains: MAINS,
       scores: { career: 8 },
-      previous: { health: 3 },
       available: true,
     });
     expect(categoriesQuery!.filters).toEqual(
@@ -99,7 +94,7 @@ describe("getRatings", () => {
     ]);
   });
 
-  it("asks for the most recent score strictly before the day", async () => {
+  it("reads only the day's ratings, never earlier days", async () => {
     const seen: Query[] = [];
     createClient.mockResolvedValue(
       fakeClient((q) => {
@@ -108,17 +103,10 @@ describe("getRatings", () => {
       }),
     );
     await getRatings("2026-10-15");
-    const before = seen.filter((q) => has(q, "lt"));
-    expect(before).toHaveLength(2);
-    for (const q of before) {
-      expect(q.filters).toEqual(
-        expect.arrayContaining([
-          ["lt", "day", "2026-10-15"],
-          ["order", "day", { ascending: false }],
-          ["limit", 1],
-        ]),
-      );
-    }
+    const ratings = seen.filter((q) => q.table === "ratings");
+    expect(ratings).toHaveLength(1);
+    expect(eqValue(ratings[0], "day")).toBe("2026-10-15");
+    expect(has(ratings[0], "lt")).toBe(false);
   });
 
   it.each([
@@ -134,7 +122,6 @@ describe("getRatings", () => {
     await expect(getRatings("2026-10-15")).resolves.toEqual({
       mains: MAINS,
       scores: {},
-      previous: {},
       available: false,
     });
   });

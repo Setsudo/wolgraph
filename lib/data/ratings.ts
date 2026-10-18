@@ -10,8 +10,6 @@ export type RatingsData = {
   mains: RateMain[];
   /** The day's score per main category id. */
   scores: Record<string, number>;
-  /** Per main category id, its most recent score before the day. */
-  previous: Record<string, number>;
   /** False when the ratings table is missing (0002_ratings.sql not applied yet). */
   available: boolean;
 };
@@ -35,7 +33,7 @@ class MissingTable extends Error {}
 
 /**
  * The signed-in user's active main categories with their scores for `day`
- * (YYYY-MM-DD) and the most recent score before it. Server only. If the
+ * (YYYY-MM-DD). Server only. If the
  * ratings table does not exist yet, returns no scores and `available: false`.
  */
 export async function getRatings(day: string): Promise<RatingsData> {
@@ -61,20 +59,11 @@ export async function getRatings(day: string): Promise<RatingsData> {
   };
 
   try {
-    const [today, ...before] = await Promise.all([
-      supabase.from("ratings").select("category_id, score").eq("user_id", userId).eq("day", day),
-      // One indexed lookup per main (primary key user_id, category_id, day).
-      ...mains.map((m) =>
-        supabase
-          .from("ratings")
-          .select("score")
-          .eq("user_id", userId)
-          .eq("category_id", m.id)
-          .lt("day", day)
-          .order("day", { ascending: false })
-          .limit(1),
-      ),
-    ]);
+    const today = await supabase
+      .from("ratings")
+      .select("category_id, score")
+      .eq("user_id", userId)
+      .eq("day", day);
 
     check(today.error, "ratings");
     const ids = new Set(mains.map((m) => m.id));
@@ -83,16 +72,9 @@ export async function getRatings(day: string): Promise<RatingsData> {
       if (ids.has(r.category_id)) scores[r.category_id] = Number(r.score);
     }
 
-    const previous: Record<string, number> = {};
-    before.forEach((result, i) => {
-      check(result.error, "previous ratings");
-      const row = result.data?.[0];
-      if (row) previous[mains[i].id] = Number(row.score);
-    });
-
-    return { mains, scores, previous, available: true };
+    return { mains, scores, available: true };
   } catch (error) {
-    if (error instanceof MissingTable) return { mains, scores: {}, previous: {}, available: false };
+    if (error instanceof MissingTable) return { mains, scores: {}, available: false };
     throw error;
   }
 }

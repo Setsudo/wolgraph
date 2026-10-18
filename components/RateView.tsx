@@ -20,7 +20,6 @@ type RateViewProps = {
   day: string;
   mains: RateMain[];
   scores: Record<string, number>;
-  previous: Record<string, number>;
   /** False when the ratings table is missing: sliders still move, nothing is sent. */
   available: boolean;
   save: SaveRating;
@@ -31,23 +30,12 @@ type RateViewProps = {
 type Scores = Record<string, number>;
 
 /** "Rate your life" (SPEC §10): one 0-10 slider per main category around the wheel. */
-export function RateView({
-  day,
-  mains,
-  scores,
-  previous,
-  available,
-  save,
-  onNavigate,
-}: RateViewProps) {
+export function RateView({ day, mains, scores, available, save, onNavigate }: RateViewProps) {
   const router = useRouter();
   const today = useLocalToday();
   const goTo = (to: string) => (onNavigate ? onNavigate(to) : router.push(`/rate?day=${to}`));
   const canGoNext = today !== null && day < today;
-  const initial = useCallback(
-    (id: string) => displayedScore(id, scores, previous),
-    [scores, previous],
-  );
+  const initial = useCallback((id: string) => displayedScore(id, scores), [scores]);
 
   /** Values the user moved; every other category shows its displayed score. */
   const [moved, setMoved] = useState<Scores>({});
@@ -63,7 +51,7 @@ export function RateView({
     new Map<string, { timer: ReturnType<typeof setTimeout>; value: number; version: number }>(),
   );
   const saveRef = useRef(save);
-  const freshRef = useRef({ scores, previous });
+  const freshRef = useRef(scores);
 
   useEffect(() => {
     saveRef.current = save;
@@ -104,15 +92,14 @@ export function RateView({
   // Fresh server data (saveRating revalidates /rate): settled categories show the server's
   // value again; categories with a debounced or in-flight change keep their local value.
   useEffect(() => {
-    const fresh = freshRef.current;
-    if (fresh.scores === scores && fresh.previous === previous) return;
-    freshRef.current = { scores, previous };
+    if (freshRef.current === scores) return;
+    freshRef.current = scores;
     const unsettled = (id: string) => (versions.current[id] ?? 0) !== (settled.current[id] ?? 0);
     const keep = (local: Scores) =>
       Object.fromEntries(Object.entries(local).filter(([id]) => unsettled(id)));
     saved.current = keep(saved.current);
     setMoved((m) => keep(m));
-  }, [scores, previous]);
+  }, [scores]);
 
   // On unmount, send any change still waiting on its debounce instead of dropping it.
   useEffect(() => {

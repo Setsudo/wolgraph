@@ -67,9 +67,9 @@
 - `supabase/migrations/0002_ratings.sql` — `ratings` table (0-10 per main category per day), main-only trigger, RLS
 - `app/(app)/rate/page.tsx` — Rate your life screen (home): reads `?day` (browser-local today or an earlier day), loads ratings, renders `RateView`
 - `app/(app)/rate/actions.ts` (+ test) — `saveRating` Server Action (0-10 integer, future-day guard, upsert, revalidates `/rate`)
-- `lib/data/ratings.ts` (+ test) — `getRatings(day)`: active mains, the day's scores, previous scores, `available` (false when the table is missing)
+- `lib/data/ratings.ts` (+ test) — `getRatings(day)`: active mains, the day's scores, `available` (false when the table is missing)
 - `lib/rate/layout.ts` (+ test) — `sideOrder(n)`: which mains go in the left and right slider columns
-- `lib/rate/score.ts` (+ test) — score range, `isValidScore`, `displayedScore` (today > previous > 5)
+- `lib/rate/score.ts` (+ test) — score range, `isValidScore`, `displayedScore` (the day's score, else 0)
 - `components/RateView.tsx` (+ test) — rate screen client: previous/next day arrows, category-coloured wheel and sliders, optimistic debounced saves, rollback toast, missing-table notice
 - `components/RatingSlider.tsx` (+ test) — 0-10 range slider with tick numbers, a value box under the thumb and an optional category colour
 - `components/RateTodayGate.tsx` (+ test) — sends `/rate` with no, invalid or future `?day` to `/rate?day=<browser-local today>`; today and past days render

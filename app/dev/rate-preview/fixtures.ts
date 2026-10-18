@@ -12,18 +12,6 @@ export const PREVIEW_MAINS: RateMain[] = [
   { id: "spirituality", name: "Spirituality", color: "#4F7C9E" },
 ];
 
-/** Today's scores: three categories already rated today. */
+/** Today's scores: three categories already rated today; the rest show 0. */
 export const PREVIEW_SCORES: Record<string, number> = { health: 8, finance: 9, family: 7 };
 
-/**
- * Most recent earlier scores. With today's, the wheel matches the reference:
- * Health 8, Personal Growth 5 (no score, default), Finance 9, Family 7, Career 2,
- * Relaxation 0, Relationships 5, Spirituality 3.
- */
-export const PREVIEW_PREVIOUS: Record<string, number> = {
-  health: 6,
-  career: 2,
-  relaxation: 0,
-  relationships: 5,
-  spirituality: 3,
-};

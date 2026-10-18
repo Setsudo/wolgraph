@@ -3,7 +3,7 @@
 import { RateView } from "@/components/RateView";
 import { useLocalToday } from "@/components/useLocalToday";
 import type { SaveResult } from "@/lib/data/day";
-import { PREVIEW_MAINS, PREVIEW_PREVIOUS, PREVIEW_SCORES } from "./fixtures";
+import { PREVIEW_MAINS, PREVIEW_SCORES } from "./fixtures";
 
 /** Stands in for saveRating: resolves after 200 ms, or rejects when the URL has ?fail=1. */
 function fakeSave(): Promise<SaveResult> {
@@ -22,7 +22,6 @@ export function RatePreview({ unavailable }: { unavailable: boolean }) {
       day={today}
       mains={PREVIEW_MAINS}
       scores={unavailable ? {} : PREVIEW_SCORES}
-      previous={unavailable ? {} : PREVIEW_PREVIOUS}
       available={!unavailable}
       save={fakeSave}
     />
